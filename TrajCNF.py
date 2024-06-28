@@ -6,7 +6,7 @@ from torchdiffeq import odeint_adjoint
 class ConditionalODE(nn.Module):
 	def __init__(self, input_dim, condition_dim, hidden_dims=(64,64)):
 		super(ConditionalODE, self).__init__()
-		dim_list = [input_dim + condition_dim] + list(hidden_dims) + [input_dim] # TODO: make input a tensor of shape [200] not [100x2]
+		dim_list = [input_dim + condition_dim] + list(hidden_dims) + [input_dim]
 		layers = []
 		for i in range(len(dim_list)-1):
 			layers.append(nn.Linear(dim_list[i]+2, dim_list[i+1]))
@@ -39,11 +39,10 @@ class ConditionalODE(nn.Module):
 	def _hutchinson_estimator(self, z_dot, z):
 		e = self.epsilon
 		z_dot_e = torch.autograd.grad(z_dot, z, grad_outputs=e, create_graph=True)[0]
-		trace_estimate = torch.sum(z_dot_e * e, dim=(1,2))
+		trace_estimate = torch.sum(z_dot_e * e, dim=2)
 		return trace_estimate
 	
-	# TODO: Is this correct? should be if input shape is [200]
-	def _jacobian_trace_exact(seld, z_dot, z):
+	def _jacobian_trace_exact(seld, z_dot, z): # TODO: I don't think this is quite right
 		trace = 0.0
 		for i in range(z_dot.shape[1]):
 			trace += torch.autograd.grad(z_dot[:, i].sum(), z, create_graph=True)[0][:, i]
@@ -54,7 +53,6 @@ class ConditionalODE(nn.Module):
 	
 	def forward(self, t, states):
 		z = states[0]
-		batchsize = z.shape[0]
 
 		with torch.set_grad_enabled(True):
 			z.requires_grad_(True)
@@ -62,7 +60,7 @@ class ConditionalODE(nn.Module):
 			z_dot = self._z_dot(t, z)
 			divergence = self._jacobian_trace(z_dot, z)
 
-		return z_dot, -divergence.view(batchsize, 1)
+		return z_dot, -divergence
 
 
 class ConditionalCNF(torch.nn.Module):
@@ -79,7 +77,7 @@ class ConditionalCNF(torch.nn.Module):
 
 	def forward(self, z, condition, delta_logpz=None, integration_times=None, reverse=False):
 		if delta_logpz is None:
-			delta_logpz = torch.zeros(z.shape[0], 1).to(z)
+			delta_logpz = torch.zeros(z.shape[0], z.shape[1]).to(z)
 		if integration_times is None:
 			integration_times = torch.tensor([0.0, 1.0]).to(z)
 		if reverse:
@@ -104,10 +102,17 @@ class ConditionalCNF(torch.nn.Module):
 	
 
 class TrajCNF(torch.nn.Module):
-	def __init__(self, input_dim, feature_dim, embedding_dim, estimate_trace=True, noise='rademacher'):
+	def __init__(self, seq_len, input_dim, feature_dim, embedding_dim, estimate_trace=True, noise='rademacher'):
 		super(TrajCNF, self).__init__()
 		self.causal_encoder = nn.GRU(input_dim + feature_dim, embedding_dim, num_layers=3, batch_first=True)
 		self.flow = ConditionalCNF(input_dim, embedding_dim, estimate_trace, noise)
+
+		self.register_buffer("base_dist_mean", torch.zeros(seq_len, input_dim))
+		self.register_buffer("base_dist_var", torch.ones(seq_len, input_dim))
+
+	@property
+	def _base_dist(self):
+		return torch.distributions.MultivariateNormal(self.base_dist_mean, torch.diag_embed(self.base_dist_var))
 
 	def _embedding(self, x, feat):
 		x = torch.cat([x, feat], dim=-1)
@@ -119,9 +124,14 @@ class TrajCNF(torch.nn.Module):
 		z, delta_logpz = self.flow(y, embedding)
 		return z, delta_logpz
 	
-	def sample(self, x, feat):
-		y = torch.randn(*x.shape).to(x)
+	def sample(self, x, feat, num_samples=1):
+		y = torch.stack([self._base_dist.sample().to(x.device) for _ in range(num_samples)])
 		embedding = self._embedding(x, feat)
 		z, delta_logpz = self.flow(y, embedding, reverse=True)
-		return z, delta_logpz
+		return y, z, delta_logpz
+
+	def log_prob(self, z_t0, delta_logpz):
+		logpz_t0 = self._base_dist.log_prob(z_t0)
+		logpz_t1 = logpz_t0 - delta_logpz
+		return logpz_t0, logpz_t1
 	
