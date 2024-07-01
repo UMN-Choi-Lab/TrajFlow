@@ -70,7 +70,7 @@ class ConditionalCNF(torch.nn.Module):
 		self.estimate_trace = estimate_trace
 		self.noise = noise
 		
-	def _flip(self, x, dim):
+	def _flip(self, x, dim): # TODO: I think I can remove this and use a torch built in
 		indices = [slice(None)] * x.dim()
 		indices[dim] = torch.arange(x.size(dim) - 1, -1, -1, dtype=torch.long, device=x.device)
 		return x[tuple(indices)]
