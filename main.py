@@ -29,12 +29,12 @@ if should_train:
         gamma=0.999,
         verbose=True)
 
-#traj_cnf.load_state_dict(torch.load('traj_cnf.pt'))
+traj_cnf.load_state_dict(torch.load('traj_cnf.pt'))
 
 if should_visualize:
     visualize(
         observation_site=ind.observation_site8,
         model=traj_cnf,
-        num_samples=1,
-        steps=10, #300
+        num_samples=2,
+        steps=10, #100
         output_dir='frames') 

@@ -6,6 +6,19 @@ import matplotlib.pyplot as plt
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+def makedir(directory):
+    try:
+        if os.path.exists(directory):
+            for root, dirs, files in os.walk(directory, topdown=False):
+                for file in files:
+                    os.remove(os.path.join(root, file))
+                for dir in dirs:
+                    os.rmdir(os.path.join(root, dir))
+            os.rmdir(directory)
+        os.makedirs(directory)
+    except OSError as e:
+        print(f"Error deleting directory {directory}: {e}")
+
 def compute_pzt1(model, input, features, grid):
     with torch.no_grad():
         batch_size = 10
@@ -26,7 +39,7 @@ def compute_pzt1(model, input, features, grid):
 def generate_video(background_image, grid, pz_t1, observed_traj, unobserved_traj, 
                    ortho_px_to_meter, steps, output_dir, i):
     frames_dir = f'{output_dir}/video{i}'
-    os.makedirs(frames_dir, exist_ok=True)
+    makedir(frames_dir)
 
     x = grid[:, 0].reshape(steps, steps)
     y = -grid[:, 1].reshape(steps, steps)
@@ -43,7 +56,7 @@ def generate_video(background_image, grid, pz_t1, observed_traj, unobserved_traj
         likelihood = likelihood / np.max(likelihood)
         likelihood = np.where(likelihood < 0.001, np.nan, likelihood)
         generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
-                        min_x, max_x, min_y, max_y, t, output_dir)
+                        min_x, max_x, min_y, max_y, t, frames_dir)
 
     command = ['ffmpeg', '-r', '10', '-i', f'{frames_dir}/frame_%03d.png', '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', f'video{i}.mp4']
     subprocess.run(command, check=True)
@@ -74,24 +87,22 @@ def generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
     plt.close()
 
 def visualize(observation_site, model, num_samples, steps, output_dir):
-    if os.path.exists(output_dir):
-        os.removedirs(output_dir)
-    os.makedirs(output_dir, exist_ok=True)
+    makedir(output_dir)
 
     model.eval()
 
     fudge_factor = 11.5
     ortho_px_to_meter = observation_site.ortho_px_to_meter * fudge_factor
 
+    linspace = torch.linspace(0, 1, steps)
+    x, y = torch.meshgrid(linspace, linspace)
+    grid = torch.stack((x.flatten(), y.flatten()), dim=-1).to(device)
+
     for i in range(num_samples):
         inputs, features = next(iter(observation_site.test_loader))
         input = inputs[:, :100, ...].to(device)
         target = inputs[:, 100:, ...].to(device)
         features = features[:, :100, ...].to(device)
-
-        linspace = torch.linspace(0, 1, steps)
-        x, y = torch.meshgrid(linspace, linspace)
-        grid = torch.stack((x.flatten(), y.flatten()), dim=-1).to(device)
     
         pz_t1 = compute_pzt1(model, input, features, grid)
 
