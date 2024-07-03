@@ -4,7 +4,8 @@ from TrajCNF import TrajCNF
 from train import train
 from visualize import visualize
 
-should_train = False#True
+# TODO: these 2 should be arg parsed
+should_train = True
 should_visualize = True
 
 ind = InD(
@@ -18,7 +19,8 @@ traj_cnf = TrajCNF(
     seq_len=100, 
     input_dim=2, 
     feature_dim=5, 
-    embedding_dim=128).to(device)
+    embedding_dim=128,
+    hidden_dims=(130,65)).to(device)
 
 if should_train:
     train(
@@ -35,6 +37,6 @@ if should_visualize:
     visualize(
         observation_site=ind.observation_site8,
         model=traj_cnf,
-        num_samples=2,
-        steps=10, #100
+        num_samples=10,
+        steps=100,
         output_dir='frames') 

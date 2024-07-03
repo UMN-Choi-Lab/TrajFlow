@@ -64,6 +64,11 @@ def generate_video(background_image, grid, pz_t1, observed_traj, unobserved_traj
     
 def generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
                    min_x, max_x, min_y, max_y, t, output_dir):
+    frame = os.path.join(output_dir, f'frame_{t:03d}.png')
+
+    if os.path.exists(frame):
+        os.remove(frame)
+
     plt.figure(figsize=(10, 8))
     plt.xlim(min_x, max_x)
     plt.ylim(min_y, max_y)
@@ -83,7 +88,7 @@ def generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
     plt.ylabel('Y')
     plt.legend()
 
-    plt.savefig(os.path.join(output_dir, f'frame_{t:03d}.png'))
+    plt.savefig(frame)
     plt.close()
 
 def visualize(observation_site, model, num_samples, steps, output_dir):

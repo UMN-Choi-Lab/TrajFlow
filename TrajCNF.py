@@ -4,12 +4,14 @@ import torch.nn.functional as F
 from torchdiffeq import odeint_adjoint
 
 class ConditionalODE(nn.Module):
-	def __init__(self, input_dim, condition_dim, hidden_dims=(64,64)):
+	def __init__(self, input_dim, condition_dim, hidden_dims):
 		super(ConditionalODE, self).__init__()
 		dim_list = [input_dim + condition_dim] + list(hidden_dims) + [input_dim]
 		layers = []
-		for i in range(len(dim_list)-1):
-			layers.append(nn.Linear(dim_list[i]+2, dim_list[i+1]))
+		for i in range(len(dim_list) - 1):
+			layers.append(nn.Linear(dim_list[i] + 2, dim_list[i + 1]))
+			if i < len(dim_list) - 2:
+				layers.append(nn.LayerNorm(dim_list[i + 1]))
 		self.layers = nn.ModuleList(layers)
 		self.condition = None
 		self.epsilon = None
@@ -20,10 +22,11 @@ class ConditionalODE(nn.Module):
 		time_encoding = t.expand(z.shape[0], z.shape[1], 1)
 		condition = self.condition.unsqueeze(1).expand(-1, z.shape[1], -1)
 		z_dot = torch.cat([z, condition], dim=-1)
-		for l, layer in enumerate(self.layers):
+		for i in range(0, len(self.layers), 2):
 			tpz_cat = torch.cat([time_encoding, positional_encoding, z_dot], dim=-1)
-			z_dot = layer(tpz_cat)
-			if l < len(self.layers) - 1:
+			z_dot = self.layers[i](tpz_cat)
+			if i < len(self.layers) - 2:
+				z_dot = self.layers[i + 1](z_dot)
 				z_dot = F.softplus(z_dot)
 		return z_dot
 	
@@ -64,9 +67,9 @@ class ConditionalODE(nn.Module):
 
 
 class ConditionalCNF(torch.nn.Module):
-	def __init__(self, input_dim, condition_dim, estimate_trace=True, noise='rademacher'):
+	def __init__(self, input_dim, condition_dim, hidden_dims, estimate_trace=True, noise='rademacher'):
 		super(ConditionalCNF, self).__init__()
-		self.time_derivative = ConditionalODE(input_dim, condition_dim)
+		self.time_derivative = ConditionalODE(input_dim, condition_dim, hidden_dims)
 		self.estimate_trace = estimate_trace
 		self.noise = noise
 		
@@ -102,10 +105,10 @@ class ConditionalCNF(torch.nn.Module):
 	
 
 class TrajCNF(torch.nn.Module):
-	def __init__(self, seq_len, input_dim, feature_dim, embedding_dim, estimate_trace=True, noise='rademacher'):
+	def __init__(self, seq_len, input_dim, feature_dim, embedding_dim, hidden_dims, estimate_trace=True, noise='rademacher'):
 		super(TrajCNF, self).__init__()
 		self.causal_encoder = nn.GRU(input_dim + feature_dim, embedding_dim, num_layers=3, batch_first=True)
-		self.flow = ConditionalCNF(input_dim, embedding_dim, estimate_trace, noise)
+		self.flow = ConditionalCNF(input_dim, embedding_dim, hidden_dims, estimate_trace, noise)
 
 		self.register_buffer("base_dist_mean", torch.zeros(seq_len, input_dim))
 		self.register_buffer("base_dist_var", torch.ones(seq_len, input_dim))

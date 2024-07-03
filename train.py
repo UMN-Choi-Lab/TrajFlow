@@ -1,5 +1,7 @@
 
+import os
 import torch
+import matplotlib.pyplot as plt
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -24,17 +26,30 @@ def train(observation_site, model, epochs, lr, gamma, verbose):
             if verbose:
                 print(f'logpz_t0 (latent): {-torch.mean(logpz_t0)}')
                 print(f'logpz_t1 (prior): {loss}')
-
-            total_loss.append(loss.item())
+            
             optim.zero_grad()
             loss.backward()
             optim.step()
             scheduler.step()
-            losses.append(loss.item())
+            
+            if verbose:
+                total_loss.append(loss.item())
+            losses.append(loss)
         
         losses = torch.stack(losses)
-        print(f"epoch: {epoch}, loss: {torch.mean(losses):.4f}")
+        epoch_loss = torch.mean(torch.mean(losses))
+        if not verbose:
+            total_loss.append(epoch_loss.item())
+        print(f"epoch: {epoch}, loss: {epoch_loss:.4f}")
 
-    #plt.plot(total_loss)
+    loss_visual = 'loss.png'
+
+    if os.path.exists(loss_visual):
+        os.remove(loss_visual)
+
+    plt.plot(total_loss)
+    plt.savefig(loss_visual)
+    plt.close()
 
     torch.save(model.state_dict(), 'traj_cnf.pt')
+    
