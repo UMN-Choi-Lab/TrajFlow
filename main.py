@@ -4,26 +4,14 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from TrajDataLoader import load_data # TODO: we should just extend torch dataloader instead
+from InD import InD # TODO: we should just extend torch dataloader instead
 from TrajCNF import TrajCNF
 
-# hyper parameters
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-verbose = True
-
-# data loader parameters
-train_ratio = 0.7
-train_batch_size = 64
-test_batch_size = 1
-
-# model parameters
-seq_len = 100
-input_dim = 2
-feature_dim = 5
-embedding_dim = 128
 
 # train parameters
-train = True
+train = False#True
+verbose = True
 epochs = 100
 lr = 1e-3
 scheduler_gamma = 0.999
@@ -31,26 +19,24 @@ scheduler_gamma = 0.999
 # visualize parameters
 visualize = True
 num_samples_to_viz = 1
-steps = 300
+steps = 10#300
 viz_batch_size = 10
 output_dir = 'frames'
 
 # data loader
 # I need to easily get the background image associated with test set data
-input = None
-features = None
-train_loader, test_loader = load_data(
-    input=input, features=features, 
-    train_ratio=train_ratio, 
-    train_batch_size=train_batch_size, 
-    test_batch_size=test_batch_size)
+ind = InD(
+    root="data",
+    train_ratio=0.7, 
+    train_batch_size=64, 
+    test_batch_size=1)
 
 # model
 traj_cnf = TrajCNF(
-    seq_len=seq_len, 
-    input_dim=input_dim, 
-    feature_dim=feature_dim, 
-    embedding_dim=embedding_dim).to(device)
+    seq_len=100, 
+    input_dim=2, 
+    feature_dim=5, 
+    embedding_dim=128).to(device)
 
 # cnf train
 if train:
@@ -62,7 +48,7 @@ if train:
     total_loss = []
     for epoch in range(epochs):
         losses = []
-        for inputs, features in train_loader:
+        for inputs, features in ind.observation_site8.train_loader:
             input = inputs[:, :100, ...].to(device)
             target = inputs[:, 100:, ...].to(device)
             features = features[:, :100, ...].to(device)
@@ -88,30 +74,16 @@ if train:
 
     torch.save(traj_cnf.state_dict(), 'traj_cnf.pt')
 
-traj_cnf.load_state_dict(torch.load('traj_cnf.pt'))
+#traj_cnf.load_state_dict(torch.load('traj_cnf.pt'))
 
 # cnf viz
-def denormalization(raw_input, x_min, x_max, y_min, y_max):
-    # x_min = 30
-    # x_max = 81
-    # y_min = -61
-    # y_max = -5
-
-    def de_normalize_x(x): return x*(x_max-x_min)+x_min if x != -1 else -1
-    def de_normalize_y(y): return y*(y_max-y_min)+y_min if y != -1 else -1
-
-    raw_input[:, :, 0] = np.vectorize(de_normalize_x)(raw_input[:, :, 0])
-    raw_input[:, :, 1] = np.vectorize(de_normalize_y)(raw_input[:, :, 1])
-    return raw_input
-
-# TODO: need to overlay on background image and use ffmpeg to make a video
 if visualize:
     os.makedirs(output_dir, exist_ok=True)
 
     traj_cnf.eval()
 
     for i in range(1):
-        inputs, features = next(iter(test_loader))
+        inputs, features = next(iter(ind.observation_site8.test_loader))
         input = inputs[:, :100, ...].to(device)
         target = inputs[:, 100:, ...].to(device)
         features = features[:, :100, ...].to(device)
@@ -133,39 +105,43 @@ if visualize:
         
             pz_t1 = torch.cat(pz_t1, dim=0)
 
-        metadata = pd.read_csv('data/08_recordingMeta.csv').to_dict(orient="records")[0]
-        ortho_px_to_meter = metadata["orthoPxToMeter"] * 11.5 # why 12?
+    fudge_factor = 11.5
+    ortho_px_to_meter = ind.observation_site8.ortho_px_to_meter * fudge_factor
 
-    denormalized_grid = denormalization(grid.unsqueeze(0).cpu().numpy(), 30, 81, -61, -1)[0]
+    denormalized_grid = ind.observation_site8.denormalize(grid.cpu().numpy())
     x = denormalized_grid[:, 0].reshape(steps, steps)
     y = -denormalized_grid[:, 1].reshape(steps, steps)
 
+    background = plt.imread('data/08_background.png')
+
+    min_x = 0
+    max_x = background.shape[1] * ortho_px_to_meter
+    min_y = background.shape[0] * ortho_px_to_meter
+    max_y = 0
+
     for t in range(100):
         likelihood = pz_t1[:, t].cpu().numpy().reshape(steps, steps)
+        likelihood = likelihood / np.max(likelihood)
+        likelihood = np.where(likelihood < 0.001, np.nan, likelihood)
 
         plt.figure(figsize=(10, 8))
 
-        background = plt.imread('data/08_background.png')
-
-        min_x = 0
-        max_x = background.shape[1] * ortho_px_to_meter
-        min_y = background.shape[0] * ortho_px_to_meter
-        max_y = 0
-
         plt.imshow(background, extent=[min_x, max_x, min_y, max_y], aspect='equal')
 
-        heatmap = plt.pcolormesh(x, y, likelihood, shading='auto', cmap='viridis', alpha=0.5)
-        plt.colorbar(heatmap, label='Likelihood')
+        color_map = plt.cm.viridis
+        color_map.set_bad(color='none')
+        heat_map = plt.pcolormesh(x, y, likelihood, shading='auto', cmap=color_map, alpha=0.5, vmin=0, vmax=1)
+        plt.colorbar(heat_map, label='Likelihood')
 
-        observed_traj = denormalization(input.cpu().numpy(), 30, 81, -61, -1)[0]
+        observed_traj = ind.observation_site8.denormalize(input[0].cpu().numpy())
         observed_traj = np.stack([observed_traj[:, 0], -observed_traj[:, 1]], axis=-1)
-        plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='red', linewidth=2, label='Observed Trajectory')
+        plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='red', linewidth=1, label='Observed Trajectory')
 
-        unobserved_traj = denormalization(target.cpu().numpy(), 30, 81, -61, -1)[0]
+        unobserved_traj = ind.observation_site8.denormalize(target[0].cpu().numpy())
         unobserved_traj = np.stack([unobserved_traj[:, 0], -unobserved_traj[:, 1]], axis=-1)
-        plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='lightcoral', linewidth=2, label='Unobserved Trajectory')
+        plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='lightcoral', linewidth=1, label='Unobserved Trajectory')
     
-        plt.title('Density Heatmap')
+        plt.title(f'Density Heatmap Time: {t}')
         plt.xlabel('X')
         plt.ylabel('Y')
         plt.legend()
