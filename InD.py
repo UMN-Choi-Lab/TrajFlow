@@ -1,3 +1,4 @@
+import os
 import torch
 import numpy as np
 import pandas as pd
@@ -57,7 +58,7 @@ class InD():
 
     def _load_observation_site(self, observation_site):
         input, features, ortho_px_to_meter = self._parse(observation_site)
-        background = f'{self.root}/{observation_site}_background.png'
+        background = os.path.join(f'{self.root}', f'{observation_site}_background.png')
 
         boundaries = np.array([
             [np.min(input[:, :, 0]), np.max(input[:, :, 0])], 
@@ -90,9 +91,9 @@ class InD():
         return InDObservationSite(background, ortho_px_to_meter, boundaries, train_loader, test_loader)
     
     def _parse(self, observation_site):
-        recording_metadata = pd.read_csv(f'{self.root}/{observation_site}_recordingMeta.csv')
-        tracks = pd.read_csv(f'{self.root}/{observation_site}_tracks.csv')
-        tracks_metadata = pd.read_csv(f'{self.root}/{observation_site}_tracksMeta.csv')
+        recording_metadata = pd.read_csv(os.path.join(f'{self.root}', f'{observation_site}_recordingMeta.csv'))
+        tracks = pd.read_csv(os.path.join(f'{self.root}', f'{observation_site}_tracks.csv'))
+        tracks_metadata = pd.read_csv(os.path.join(f'{self.root}', f'{observation_site}_tracksMeta.csv'))
 
         car_list = ['car', 'truck_bus']
         mask = (tracks_metadata['class'] == car_list[0]) | (tracks_metadata['class'] == car_list[1])

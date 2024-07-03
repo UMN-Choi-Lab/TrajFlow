@@ -5,7 +5,7 @@ from train import train
 from visualize import visualize
 
 # TODO: these 2 should be arg parsed
-should_train = True
+should_train = False
 should_visualize = True
 
 ind = InD(
@@ -37,6 +37,6 @@ if should_visualize:
     visualize(
         observation_site=ind.observation_site8,
         model=traj_cnf,
-        num_samples=10,
+        num_samples=2,
         steps=100,
-        output_dir='frames') 
+        output_dir='visualization') 

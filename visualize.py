@@ -38,7 +38,7 @@ def compute_pzt1(model, input, features, grid):
     
 def generate_video(background_image, grid, pz_t1, observed_traj, unobserved_traj, 
                    ortho_px_to_meter, steps, output_dir, i):
-    frames_dir = f'{output_dir}/video{i}'
+    frames_dir = os.path.join(f'{output_dir}', 'frames', f'video{i}')
     makedir(frames_dir)
 
     x = grid[:, 0].reshape(steps, steps)
@@ -58,7 +58,9 @@ def generate_video(background_image, grid, pz_t1, observed_traj, unobserved_traj
         generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
                         min_x, max_x, min_y, max_y, t, frames_dir)
 
-    command = ['ffmpeg', '-r', '10', '-i', f'{frames_dir}/frame_%03d.png', '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', f'video{i}.mp4']
+    frame_source = os.path.join(f'{frames_dir}', 'frame_%03d.png')
+    video_destination = os.path.join(output_dir, f'video{i}.mp4')
+    command = ['ffmpeg', '-r', '10', '-i', frame_source, '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', video_destination]
     subprocess.run(command, check=True)
 
     

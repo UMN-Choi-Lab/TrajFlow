@@ -1,7 +1,8 @@
 __pycache__/
 data/
-frames/
+visualization/
 
 *.exe
 *.mp4
+*.png
 *.pt
