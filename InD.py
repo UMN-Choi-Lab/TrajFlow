@@ -57,7 +57,7 @@ class InD():
 
     def _load_observation_site(self, observation_site):
         input, features, ortho_px_to_meter = self._parse(observation_site)
-        background = f'{self.root}/{observation_site}_background'
+        background = f'{self.root}/{observation_site}_background.png'
 
         boundaries = np.array([
             [np.min(input[:, :, 0]), np.max(input[:, :, 0])], 
