@@ -14,8 +14,6 @@ class ConditionalODE(nn.Module):
 				layers.append(nn.LayerNorm(dim_list[i + 1]))
 		self.layers = nn.ModuleList(layers)
 		self.condition = None
-		self.epsilon = None
-		self.estimate_trace = False
 
 	def _z_dot(self, t, z):
 		positional_encoding = (torch.cumsum(torch.ones_like(z)[:, :, 0], 1) / z.shape[1]).unsqueeze(-1)
@@ -30,29 +28,12 @@ class ConditionalODE(nn.Module):
 				z_dot = F.softplus(z_dot)
 		return z_dot
 	
-	def _gaussian_noise(self, z):
-		noise = torch.randn_like(z).to(z)
-		self.epsilon = noise
-	
-	def _rademacher_noise(self, z):
-		random_bits = torch.randint(0, 2, z.shape, device=z.device, dtype=z.dtype)
-		noise = 2 * random_bits - 1
-		self.epsilon = noise
-		
-	def _hutchinson_estimator(self, z_dot, z):
-		e = self.epsilon
-		z_dot_e = torch.autograd.grad(z_dot, z, grad_outputs=e, create_graph=True)[0]
-		trace_estimate = torch.sum(z_dot_e * e, dim=2)
-		return trace_estimate
-	
-	def _jacobian_trace_exact(seld, z_dot, z): # TODO: I don't think this is quite right
-		trace = 0.0
-		for i in range(z_dot.shape[1]):
-			trace += torch.autograd.grad(z_dot[:, i].sum(), z, create_graph=True)[0][:, i]
+	def _jacobian_trace(seld, z_dot, z):
+		batch_size, seq_len, dim = z.shape
+		trace = torch.zeros(batch_size, seq_len, device=z.device)
+		for i in range(dim):
+			trace += torch.autograd.grad(z_dot[:, :, i].sum(), z, create_graph=True)[0][:, :, i]
 		return trace
-
-	def _jacobian_trace(self, z_dot, z):
-		return self._hutchinson_estimator(z_dot, z) if self.estimate_trace else self._jacobian_trace_exact(z_dot, z)
 	
 	def forward(self, t, states):
 		z = states[0]
@@ -67,11 +48,9 @@ class ConditionalODE(nn.Module):
 
 
 class ConditionalCNF(torch.nn.Module):
-	def __init__(self, input_dim, condition_dim, hidden_dims, estimate_trace=True, noise='rademacher'):
+	def __init__(self, input_dim, condition_dim, hidden_dims):
 		super(ConditionalCNF, self).__init__()
 		self.time_derivative = ConditionalODE(input_dim, condition_dim, hidden_dims)
-		self.estimate_trace = estimate_trace
-		self.noise = noise
 		
 	def _flip(self, x, dim): # TODO: I think I can remove this and use a torch built in
 		indices = [slice(None)] * x.dim()
@@ -87,15 +66,6 @@ class ConditionalCNF(torch.nn.Module):
 			integration_times = self._flip(integration_times, 0)
 
 		self.time_derivative.condition = condition
-		self.time_derivative.estimate_trace = self.estimate_trace
-		if self.estimate_trace:
-			if self.noise == 'gaussian':
-				self.time_derivative._gaussian_noise(z)
-			elif self.noise == 'rademacher':
-				self.time_derivative._rademacher_noise(z)
-			else:
-				raise ValueError(f'{self.noise} is not a valid noise distribution. please use gaussian or rademacher.')
-
 		state = odeint_adjoint(self.time_derivative, (z, delta_logpz), integration_times, method='dopri5', atol=1e-5, rtol=1e-5)
 
 		if len(integration_times) == 2:
@@ -105,10 +75,10 @@ class ConditionalCNF(torch.nn.Module):
 	
 
 class TrajCNF(torch.nn.Module):
-	def __init__(self, seq_len, input_dim, feature_dim, embedding_dim, hidden_dims, estimate_trace=True, noise='rademacher'):
+	def __init__(self, seq_len, input_dim, feature_dim, embedding_dim, hidden_dims):
 		super(TrajCNF, self).__init__()
 		self.causal_encoder = nn.GRU(input_dim + feature_dim, embedding_dim, num_layers=3, batch_first=True)
-		self.flow = ConditionalCNF(input_dim, embedding_dim, hidden_dims, estimate_trace, noise)
+		self.flow = ConditionalCNF(input_dim, embedding_dim, hidden_dims)
 
 		self.register_buffer("base_dist_mean", torch.zeros(seq_len, input_dim))
 		self.register_buffer("base_dist_var", torch.ones(seq_len, input_dim))
