@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchdiffeq import odeint_adjoint
 
-import numpy as np # natural cubic spline uses this... can we just use torch? I think we can use torch.empty
+import numpy as np # natural cubic spline uses this... can we just use torch?
 
 class NaturalCubicSpline:
 	"""Calculates the natural cubic spline approximation to the batch of controls given. Also calculates its derivative.
@@ -160,88 +160,45 @@ class NaturalCubicSpline:
 		inner = self._two_c[..., index, :] + self._three_d[..., index, :] * fractional_part
 		deriv = self._b[..., index, :] + inner * fractional_part
 		return deriv
-	
 
 class CDE(nn.Module):
-	def __init__(self, input_dim, hidden_dim, num_layers=3): # TODO: use num_layers
+	def __init__(self, input_dim, feature_dim, hidden_dims):
 		super(CDE, self).__init__()
+		self.control_signal = None
 		self.input_dim = input_dim
-		self.hidden_dim = hidden_dim
+		self.feature_dim = feature_dim
+		self.output_dim = input_dim * (input_dim + feature_dim)
 
-		self.linear1 = nn.Linear(hidden_dim, hidden_dim)
-		self.linear2 = nn.Linear(hidden_dim, hidden_dim)
-		self.linear3 = nn.Linear(hidden_dim, input_dim * hidden_dim)
-	
-	def forward(self, x):
-		x = self.linear1(x)
-		x = x.relu()
-		x = self.linear2(x)
-		x = x.relu()
-		x = self.linear3(x)
-		x = x.tanh()
-		x = x.view(*x.shape[:-1], self.hidden_dim, self.input_dim)
-		return x
-	
-
-class VectorField(torch.nn.Module):
-	def __init__(self, dX_dt, f):
-		super(VectorField, self).__init__()
-		self.dX_dt = dX_dt
-		self.f = f
-
-	def forward(self, t, z):
-		dX_dt = self.dX_dt(t)
-		f = self.f(z)
-		out = (f @ dX_dt.unsqueeze(-1)).squeeze(-1)
-		return out
-	
-
-class CasualEncoder(torch.nn.Module):
-	def __init__(self, input_dim, hidden_dim):
-		super(CasualEncoder, self).__init__()
-		self.embed = torch.nn.Linear(input_dim, hidden_dim)
-		self.f = CDE(input_dim, hidden_dim)
-
-	def _interpolate(self, x):
-		batch_size, seq_length, _ = x.size()
-		indices = torch.arange(seq_length).to(x)
-		spline = NaturalCubicSpline(indices, x)
-		return spline
-
-	def forward(self, x, t=None):
-		if t is None:
-			t = torch.tensor([0.0, 1.0]).to(x)
-
-		spline = self._interpolate(x)
-		vector_field = VectorField(dX_dt=spline.derivative, f=self.f)
-		z0 = self.embed(spline.evaluate(t[0]))
-		out = odeint_adjoint(vector_field, z0, t, method='dopri5', atol=1e-5, rtol=1e-5)
-		return out[1]
-
-
-class ConditionalODE(nn.Module):
-	def __init__(self, input_dim, condition_dim, hidden_dims):
-		super(ConditionalODE, self).__init__()
-		dim_list = [input_dim + condition_dim] + list(hidden_dims) + [input_dim]
+		dim_list = [input_dim] + list(hidden_dims) + [self.output_dim]
 		layers = []
 		for i in range(len(dim_list) - 1):
 			layers.append(nn.Linear(dim_list[i] + 2, dim_list[i + 1]))
 			if i < len(dim_list) - 2:
 				layers.append(nn.LayerNorm(dim_list[i + 1]))
 		self.layers = nn.ModuleList(layers)
-		self.condition = None
 
-	def _z_dot(self, t, z):
+	def _f(self, t, z):
 		positional_encoding = (torch.cumsum(torch.ones_like(z)[:, :, 0], 1) / z.shape[1]).unsqueeze(-1)
 		time_encoding = t.expand(z.shape[0], z.shape[1], 1)
-		condition = self.condition.unsqueeze(1).expand(-1, z.shape[1], -1)
-		z_dot = torch.cat([z, condition], dim=-1)
+		z_dot = z
 		for i in range(0, len(self.layers), 2):
 			tpz_cat = torch.cat([time_encoding, positional_encoding, z_dot], dim=-1)
 			z_dot = self.layers[i](tpz_cat)
 			if i < len(self.layers) - 2:
 				z_dot = self.layers[i + 1](z_dot)
 				z_dot = F.softplus(z_dot)
+		return z_dot
+	
+	def _dx_dt(self, t, z):
+		dx_dt = self.control_signal.derivative(t).unsqueeze(1).expand(-1, z.shape[1], -1)
+		return dx_dt
+
+	def _z_dot(self, t, z):
+		dx_dt = self._dx_dt(t, z)
+		z_dot = self._f(t, z)
+		z_dot = z_dot.view(z_dot.shape[0], z_dot.shape[1], self.input_dim, self.input_dim + self.feature_dim)
+		z_dot = z_dot @ dx_dt.unsqueeze(-1)
+		z_dot = z_dot.squeeze(-1)
 		return z_dot
 	
 	def _jacobian_trace(seld, z_dot, z):
@@ -263,12 +220,12 @@ class ConditionalODE(nn.Module):
 		return z_dot, -divergence
 
 
-class ConditionalCNF(torch.nn.Module):
-	def __init__(self, input_dim, condition_dim, hidden_dims):
-		super(ConditionalCNF, self).__init__()
-		self.time_derivative = ConditionalODE(input_dim, condition_dim, hidden_dims)
+class CCNF(torch.nn.Module):
+	def __init__(self, input_dim, feature_dim, hidden_dims):
+		super(CCNF, self).__init__()
+		self.time_derivative = CDE(input_dim, feature_dim, hidden_dims)
 
-	def forward(self, z, condition, delta_logpz=None, integration_times=None, reverse=False):
+	def forward(self, z, control_signal, delta_logpz=None, integration_times=None, reverse=False):
 		if delta_logpz is None:
 			delta_logpz = torch.zeros(z.shape[0], z.shape[1]).to(z)
 		if integration_times is None:
@@ -276,7 +233,7 @@ class ConditionalCNF(torch.nn.Module):
 		if reverse:
 			integration_times = torch.flip(integration_times, [0])
 
-		self.time_derivative.condition = condition
+		self.time_derivative.control_signal = control_signal
 		state = odeint_adjoint(self.time_derivative, (z, delta_logpz), integration_times, method='dopri5', atol=1e-5, rtol=1e-5)
 
 		if len(integration_times) == 2:
@@ -285,12 +242,10 @@ class ConditionalCNF(torch.nn.Module):
 		return z, delta_logpz
 	
 
-class TrajCNF(torch.nn.Module):
-	def __init__(self, seq_len, input_dim, feature_dim, embedding_dim, hidden_dims):
-		super(TrajCNF, self).__init__()
-		#self.causal_encoder = nn.GRU(input_dim + feature_dim, embedding_dim, num_layers=3, batch_first=True)
-		self.causal_encoder = CasualEncoder(input_dim + feature_dim, embedding_dim)
-		self.flow = ConditionalCNF(input_dim, embedding_dim, hidden_dims)
+class TrajCCNF(torch.nn.Module):
+	def __init__(self, seq_len, input_dim, feature_dim, hidden_dims):
+		super(TrajCCNF, self).__init__()
+		self.flow = CCNF(input_dim, feature_dim, hidden_dims)
 
 		self.register_buffer("base_dist_mean", torch.zeros(seq_len, input_dim))
 		self.register_buffer("base_dist_var", torch.ones(seq_len, input_dim))
@@ -298,23 +253,23 @@ class TrajCNF(torch.nn.Module):
 	@property
 	def _base_dist(self):
 		return torch.distributions.MultivariateNormal(self.base_dist_mean, torch.diag_embed(self.base_dist_var))
-
-	def _embedding(self, x, feat):
+	
+	def _interpolate(self, x, feat):
+		batch_size, seq_length, _ = x.size()
 		x = torch.cat([x, feat], dim=-1)
-		#embedding, _ = self.causal_encoder(x)
-		embedding = self.causal_encoder(x)
-		return embedding
-		#return embedding[:, -1, :]
+		indices = torch.arange(seq_length).to(x)
+		spline = NaturalCubicSpline(indices, x)
+		return spline
 
 	def forward(self, x, y, feat):
-		embedding = self._embedding(x, feat)
-		z, delta_logpz = self.flow(y, embedding)
+		spline = self._interpolate(x, feat)
+		z, delta_logpz = self.flow(y, spline)
 		return z, delta_logpz
 	
 	def sample(self, x, feat, num_samples=1):
 		y = torch.stack([self._base_dist.sample().to(x.device) for _ in range(num_samples)])
-		embedding = self._embedding(x, feat)
-		z, delta_logpz = self.flow(y, embedding, reverse=True)
+		spline = self._interpolate(x, feat)
+		z, delta_logpz = self.flow(y, spline, reverse=True)
 		return y, z, delta_logpz
 
 	def log_prob(self, z_t0, delta_logpz):

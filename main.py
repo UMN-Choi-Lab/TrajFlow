@@ -1,11 +1,15 @@
 import torch
 from InD import InD
 from TrajCNF import TrajCNF
+from TrajCNF_GRU import TrajCNF_GRU
+from TrajCCNF import TrajCCNF
 from train import train
+from evaluate import evaluate
 from visualize import visualize
 
-# TODO: these 2 should be arg parsed
+# TODO: these should be arg parsed
 should_train = True
+should_evaluate = True
 should_visualize = True
 
 ind = InD(
@@ -21,6 +25,11 @@ traj_cnf = TrajCNF(
     feature_dim=5, 
     embedding_dim=128,
     hidden_dims=(130,65)).to(device)
+#traj_cnf = TrajCCNF(
+#    seq_len=100,
+#    input_dim=2,
+#    feature_dim=5,
+#    hidden_dims=(10, 10)).to(device)
 
 if should_train:
     train(
@@ -32,6 +41,11 @@ if should_train:
         verbose=True)
 
 traj_cnf.load_state_dict(torch.load('traj_cnf.pt'))
+
+if should_evaluate:
+    evaluate(
+        observation_site=ind.observation_site8,
+        model=traj_cnf)
 
 if should_visualize:
     visualize(
