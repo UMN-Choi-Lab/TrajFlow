@@ -2,7 +2,6 @@ import torch
 from InD import InD
 from TrajCNF import TrajCNF
 from TrajCNF_GRU import TrajCNF_GRU
-from TrajCCNF import TrajCCNF
 from train import train
 from evaluate import evaluate
 from visualize import visualize
@@ -24,18 +23,14 @@ traj_cnf = TrajCNF(
     input_dim=2, 
     feature_dim=5, 
     embedding_dim=128,
+    #hidden_dims=(256,256,256)).to(device)
     hidden_dims=(130,65)).to(device)
-#traj_cnf = TrajCCNF(
-#    seq_len=100,
-#    input_dim=2,
-#    feature_dim=5,
-#    hidden_dims=(10, 10)).to(device)
 
 if should_train:
     train(
         observation_site=ind.observation_site8,
         model=traj_cnf,
-        epochs=100,
+        epochs=10,
         lr=1e-3,
         gamma=0.999,
         verbose=True)

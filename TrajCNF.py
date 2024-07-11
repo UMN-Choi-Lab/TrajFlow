@@ -161,23 +161,47 @@ class NaturalCubicSpline:
 		deriv = self._b[..., index, :] + inner * fractional_part
 		return deriv
 	
+class MLP(nn.Module):
+	def __init__(self, input_dim, output_dim, hidden_dims):
+		super(MLP, self).__init__()
+		dim_list = [input_dim ] + list(hidden_dims) + [output_dim]
+		layers = []
+		for i in range(len(dim_list) - 1):
+			layers.append(nn.Linear(dim_list[i], dim_list[i + 1]))
+			if i < len(dim_list) - 2:
+				layers.append(nn.LayerNorm(dim_list[i + 1]))
+			#layers.append(nn.Softplus())
+		self.mlp = nn.Sequential(*layers)
+
+	def forward(self, x):
+		return self.mlp(x)
+
 
 class CDE(nn.Module):
 	def __init__(self, input_dim, hidden_dim, num_layers=3): # TODO: use num_layers
 		super(CDE, self).__init__()
 		self.input_dim = input_dim
 		self.hidden_dim = hidden_dim
+		self.mlp = MLP(hidden_dim, input_dim * hidden_dim, (hidden_dim, hidden_dim))
 
-		self.linear1 = nn.Linear(hidden_dim, hidden_dim)
-		self.linear2 = nn.Linear(hidden_dim, hidden_dim)
-		self.linear3 = nn.Linear(hidden_dim, input_dim * hidden_dim)
+		#self.linear1 = nn.Linear(hidden_dim, hidden_dim)
+		#self.layer_norm1 = nn.LayerNorm(hidden_dim)
+		#self.linear2 = nn.Linear(hidden_dim, 2 * hidden_dim)
+		#self.linear3 = nn.Linear(2 * hidden_dim, 4 * hidden_dim)
+		#self.linear4 = nn.Linear(hidden_dim, input_dim * hidden_dim)
 	
 	def forward(self, x):
-		x = self.linear1(x)
-		x = x.relu()
-		x = self.linear2(x)
-		x = x.relu()
-		x = self.linear3(x)
+		#x = self.linear1(x)
+		#x = self.layer_norm1(x)
+		#x = x.relu()
+		#x = F.softplus(x)
+		#x = self.linear2(x)
+		#x = x.relu()
+		#x = self.linear3(x)
+		#x = x.relu()
+		#x = self.linear4(x)
+		#x = x.tanh()
+		x = self.mlp(x)
 		x = x.tanh()
 		x = x.view(*x.shape[:-1], self.hidden_dim, self.input_dim)
 		return x
@@ -186,7 +210,8 @@ class CDE(nn.Module):
 class VectorField(torch.nn.Module):
 	def __init__(self, dX_dt, f):
 		super(VectorField, self).__init__()
-		self.dX_dt = dX_dt
+		self.dX_dt = dX_dt.derivative
+		self.X = dX_dt.evaluate
 		self.f = f
 
 	def forward(self, t, z):
@@ -199,24 +224,17 @@ class VectorField(torch.nn.Module):
 class CasualEncoder(torch.nn.Module):
 	def __init__(self, input_dim, hidden_dim):
 		super(CasualEncoder, self).__init__()
-		self.embed = torch.nn.Linear(input_dim, hidden_dim)
+		self.embed = MLP(input_dim, hidden_dim, (hidden_dim, hidden_dim))#torch.nn.Linear(input_dim, hidden_dim)
+		self.readout = MLP(hidden_dim, hidden_dim, (hidden_dim, hidden_dim))
 		self.f = CDE(input_dim, hidden_dim)
 
-	def _interpolate(self, x):
-		batch_size, seq_length, _ = x.size()
-		indices = torch.arange(seq_length).to(x)
-		spline = NaturalCubicSpline(indices, x)
-		return spline
-
-	def forward(self, x, t=None):
-		if t is None:
-			t = torch.tensor([0.0, 1.0]).to(x)
-
-		spline = self._interpolate(x)
-		vector_field = VectorField(dX_dt=spline.derivative, f=self.f)
+	def forward(self, t, x):
+		spline = NaturalCubicSpline(t, x)
+		vector_field = VectorField(dX_dt=spline, f=self.f)
 		z0 = self.embed(spline.evaluate(t[0]))
 		out = odeint_adjoint(vector_field, z0, t, method='dopri5', atol=1e-5, rtol=1e-5)
-		return out[1]
+		embedding = self.readout(out[1])
+		return embedding
 
 
 class ConditionalODE(nn.Module):
@@ -226,8 +244,8 @@ class ConditionalODE(nn.Module):
 		layers = []
 		for i in range(len(dim_list) - 1):
 			layers.append(nn.Linear(dim_list[i] + 2, dim_list[i + 1]))
-			if i < len(dim_list) - 2:
-				layers.append(nn.LayerNorm(dim_list[i + 1]))
+			#if i < len(dim_list) - 2:
+			#	layers.append(nn.LayerNorm(dim_list[i + 1]))
 		self.layers = nn.ModuleList(layers)
 		self.condition = None
 
@@ -236,12 +254,13 @@ class ConditionalODE(nn.Module):
 		time_encoding = t.expand(z.shape[0], z.shape[1], 1)
 		condition = self.condition.unsqueeze(1).expand(-1, z.shape[1], -1)
 		z_dot = torch.cat([z, condition], dim=-1)
-		for i in range(0, len(self.layers), 2):
+		#for i in range(0, len(self.layers), 2):
+		for i in range(len(self.layers)):
 			tpz_cat = torch.cat([time_encoding, positional_encoding, z_dot], dim=-1)
 			z_dot = self.layers[i](tpz_cat)
-			if i < len(self.layers) - 2:
-				z_dot = self.layers[i + 1](z_dot)
-				z_dot = F.softplus(z_dot)
+			#if i < len(self.layers) - 2:
+			#	z_dot = self.layers[i + 1](z_dot)
+			#	z_dot = F.softplus(z_dot)
 		return z_dot
 	
 	def _jacobian_trace(seld, z_dot, z):
@@ -288,8 +307,8 @@ class ConditionalCNF(torch.nn.Module):
 class TrajCNF(torch.nn.Module):
 	def __init__(self, seq_len, input_dim, feature_dim, embedding_dim, hidden_dims):
 		super(TrajCNF, self).__init__()
-		#self.causal_encoder = nn.GRU(input_dim + feature_dim, embedding_dim, num_layers=3, batch_first=True)
-		self.causal_encoder = CasualEncoder(input_dim + feature_dim, embedding_dim)
+		self.causal_encoder = nn.GRU(input_dim + feature_dim, embedding_dim, num_layers=3, batch_first=True)
+		#self.causal_encoder = CasualEncoder(input_dim + feature_dim, embedding_dim)
 		self.flow = ConditionalCNF(input_dim, embedding_dim, hidden_dims)
 
 		self.register_buffer("base_dist_mean", torch.zeros(seq_len, input_dim))
@@ -301,10 +320,12 @@ class TrajCNF(torch.nn.Module):
 
 	def _embedding(self, x, feat):
 		x = torch.cat([x, feat], dim=-1)
-		#embedding, _ = self.causal_encoder(x)
-		embedding = self.causal_encoder(x)
-		return embedding
-		#return embedding[:, -1, :]
+		embedding, _ = self.causal_encoder(x)
+		return embedding[:, -1, :]
+		#_, seq_length, _ = x.shape
+		#indices = torch.linspace(0., 1., seq_length).to(x)
+		#embedding = self.causal_encoder(indices, x)
+		#return embedding
 
 	def forward(self, x, y, feat):
 		embedding = self._embedding(x, feat)
