@@ -1,7 +1,8 @@
 import torch
 from InD import InD
 from TrajCNF import TrajCNF
-from TrajCNF_GRU import TrajCNF_GRU
+#from TrajCNF_GRU import TrajCNF_GRU
+from model.TrajFlow import TrajFlow,  CausalEnocder, Flow
 from train import train
 from evaluate import evaluate
 from visualize import visualize
@@ -18,19 +19,20 @@ ind = InD(
     test_batch_size=1)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-traj_cnf = TrajCNF(
+traj_cnf = TrajFlow(
     seq_len=100, 
     input_dim=2, 
     feature_dim=5, 
     embedding_dim=128,
-    #hidden_dims=(256,256,256)).to(device)
-    hidden_dims=(130,65)).to(device)
+    hidden_dims=(130,65),
+    causal_encoder=CausalEnocder.GRU,
+    flow=Flow.DNF).to(device)
 
 if should_train:
     train(
         observation_site=ind.observation_site8,
         model=traj_cnf,
-        epochs=10,
+        epochs=10,#0,
         lr=1e-3,
         gamma=0.999,
         verbose=True)
