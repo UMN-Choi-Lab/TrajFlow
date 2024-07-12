@@ -32,7 +32,7 @@ if should_train:
     train(
         observation_site=ind.observation_site8,
         model=traj_cnf,
-        epochs=10,#0,
+        epochs=0,#10,#0,
         lr=1e-3,
         gamma=0.999,
         verbose=True)
@@ -42,7 +42,8 @@ traj_cnf.load_state_dict(torch.load('traj_cnf.pt'))
 if should_evaluate:
     evaluate(
         observation_site=ind.observation_site8,
-        model=traj_cnf)
+        model=traj_cnf,
+        num_samples=1)
 
 if should_visualize:
     visualize(
