@@ -5,7 +5,7 @@ class GRU(nn.Module):
 		super(GRU, self).__init__()
 		self.gru = nn.GRU(input_dim, hidden_dim, num_layers, batch_first=True)
 
-	def forward(self, t, x): # t could be used for delta-t GRU
+	def forward(self, t, x): # lets try GRU with forward imputation and mask and time concatenation
 		embedding, _ = self.gru(x)
 		return embedding[:, -1, :]
 	

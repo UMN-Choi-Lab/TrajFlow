@@ -24,15 +24,15 @@ traj_cnf = TrajFlow(
     input_dim=2, 
     feature_dim=5, 
     embedding_dim=128,
-    hidden_dims=(130,65),
-    causal_encoder=CausalEnocder.GRU,
-    flow=Flow.DNF).to(device)
+    hidden_dims=(130, 130, 130),
+    causal_encoder=CausalEnocder.CDE,
+    flow=Flow.CNF).to(device)
 
 if should_train:
     train(
         observation_site=ind.observation_site8,
         model=traj_cnf,
-        epochs=0,#10,#0,
+        epochs=100,
         lr=1e-3,
         gamma=0.999,
         verbose=True)

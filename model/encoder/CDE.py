@@ -205,6 +205,10 @@ class CDE(torch.nn.Module):
 		self.f = CDEFunc(input_dim, hidden_dim, num_layers)
 
 	def forward(self, t, x):
+		print(t.shape)
+		print(x.shape)
+		# TODO: We need to append t as a channel
+
 		spline = NaturalCubicSpline(t, x)
 		vector_field = VectorField(dX_dt=spline.derivative, f=self.f)
 		z0 = self.embed(spline.evaluate(t[0]))
