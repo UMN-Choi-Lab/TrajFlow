@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-def train(observation_site, model, epochs, lr, gamma, verbose):
+def train(observation_site, model, epochs, lr, weight_decay, gamma, verbose):
     model.train()
 
-    optim = torch.optim.Adam(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=gamma)
+    optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    #scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=gamma)
     
     total_loss = []
     for epoch in range(epochs):
@@ -30,7 +30,7 @@ def train(observation_site, model, epochs, lr, gamma, verbose):
             optim.zero_grad()
             loss.backward()
             optim.step()
-            scheduler.step()
+            #scheduler.step()
             
             if verbose:
                 total_loss.append(loss.item())

@@ -23,9 +23,9 @@ traj_cnf = TrajFlow(
     seq_len=100, 
     input_dim=2, 
     feature_dim=5, 
-    embedding_dim=128,
-    hidden_dims=(130, 130, 130),
-    causal_encoder=CausalEnocder.CDE,
+    embedding_dim=10,
+    hidden_dims=(64, 64),
+    causal_encoder=CausalEnocder.GRU,
     flow=Flow.CNF).to(device)
 
 if should_train:
@@ -34,6 +34,7 @@ if should_train:
         model=traj_cnf,
         epochs=100,
         lr=1e-3,
+        weight_decay=1e-5,
         gamma=0.999,
         verbose=True)
 

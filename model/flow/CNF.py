@@ -13,6 +13,7 @@ class ODEFunc(nn.Module):
 			if i < len(dim_list) - 2:
 				layers.append(nn.LayerNorm(dim_list[i + 1]))
 		self.layers = nn.ModuleList(layers)
+		self.initial_norm = nn.LayerNorm(dim_list[0])
 		self.condition = None
 
 	def _z_dot(self, t, z):
@@ -20,9 +21,10 @@ class ODEFunc(nn.Module):
 		time_encoding = t.expand(z.shape[0], z.shape[1], 1)
 		condition = self.condition.unsqueeze(1).expand(-1, z.shape[1], -1)
 		z_dot = torch.cat([z, condition], dim=-1)
+		z_dot = self.initial_norm(z_dot)
 		for i in range(0, len(self.layers), 2):
-			tpz_cat = torch.cat([time_encoding, positional_encoding, z_dot], dim=-1)
-			z_dot = self.layers[i](tpz_cat)
+			zpt_cat = torch.cat([z_dot, time_encoding, positional_encoding], dim=-1)
+			z_dot = self.layers[i](zpt_cat)
 			if i < len(self.layers) - 2:
 				z_dot = self.layers[i + 1](z_dot)
 				z_dot = F.softplus(z_dot)

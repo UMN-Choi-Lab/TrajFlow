@@ -162,26 +162,24 @@ class NaturalCubicSpline:
 
 
 class CDEFunc(nn.Module):
-	def __init__(self, input_dim, hidden_dim, num_layers=3): # TODO: use num_layers
+	def __init__(self, input_dim, embedding_dim, hidden_dim, num_layers=3): # TODO: use num_layers
 		super(CDEFunc, self).__init__()
 		self.input_dim = input_dim
-		self.hidden_dim = hidden_dim
+		self.embedding_dim = embedding_dim
 		
-		dim_list = [hidden_dim] * num_layers + [input_dim * hidden_dim]
+		dim_list = [embedding_dim] + [hidden_dim] * num_layers + [input_dim * embedding_dim]
 		layers = []
 		for i in range(len(dim_list) - 1):
 			layers.append(nn.Linear(dim_list[i], dim_list[i + 1]))
-			#if i < len(dim_list) - 2:
-			layers.append(nn.LayerNorm(dim_list[i + 1]))
-			layers.append(nn.Softplus())
+			if i < len(dim_list) - 2:
+				layers.append(nn.LayerNorm(dim_list[i + 1]))
+				layers.append(nn.ReLU())
 		self.mlp = nn.Sequential(*layers)
-		#self.norm = nn.LayerNorm(dim_list[-1])
 	
 	def forward(self, x):
 		x = self.mlp(x)
-		#x = self.norm(x)
-		#x = x.tanh()
-		x = x.view(*x.shape[:-1], self.hidden_dim, self.input_dim)
+		x = x.tanh()
+		x = x.view(*x.shape[:-1], self.embedding_dim, self.input_dim)
 		return x
 	
 
@@ -199,16 +197,16 @@ class VectorField(torch.nn.Module):
 	
 
 class CDE(torch.nn.Module):
-	def __init__(self, input_dim, hidden_dim, num_layers):
+	def __init__(self, input_dim, embedding_dim, hidden_dim, num_layers):
 		super(CDE, self).__init__()
-		self.embed = torch.nn.Linear(input_dim, hidden_dim)
-		self.f = CDEFunc(input_dim, hidden_dim, num_layers)
+		self.embed = torch.nn.Linear(input_dim + 1, embedding_dim)
+		self.f = CDEFunc(input_dim + 1, embedding_dim, hidden_dim, num_layers)
 
 	def forward(self, t, x):
-		print(t.shape)
-		print(x.shape)
-		# TODO: We need to append t as a channel
-
+		batch_size, seq_len, _ = x.shape
+		t_expanded = t.unsqueeze(0).unsqueeze(-1)
+		t_expanded = t_expanded.expand(batch_size, seq_len, 1)
+		x = torch.cat([x, t_expanded], dim=-1)
 		spline = NaturalCubicSpline(t, x)
 		vector_field = VectorField(dX_dt=spline.derivative, f=self.f)
 		z0 = self.embed(spline.evaluate(t[0]))
