@@ -40,11 +40,12 @@ class InDObservationSite():
     
 
 class InD():
-    def __init__(self, root, train_ratio, train_batch_size, test_batch_size):
+    def __init__(self, root, train_ratio, train_batch_size, test_batch_size, missing_rate=0):
         self.root = root
         self.train_ratio = train_ratio
         self.train_batch_size = train_batch_size
         self.test_batch_size = test_batch_size
+        self.missing_rate = missing_rate
         self.observation_sites = {}
 
     @property
@@ -82,6 +83,9 @@ class InD():
 
         train_feature = torch.FloatTensor(features[train_idx])
         test_feature = torch.FloatTensor(features[test_idx])
+
+        self._mask(train_input, train_feature)
+        self._mask(test_input, test_feature)
 
         train_data = InDDataset(train_input, train_feature)
         test_data = InDDataset(test_input, test_feature)
@@ -123,3 +127,11 @@ class InD():
         ortho_px_to_meter = recording_metadata.at[0, 'orthoPxToMeter']
 
         return input, features, ortho_px_to_meter
+    
+    def _mask(self, data, features):
+        seq_len = 100 # TODO: we have to not hard code 100 everywhere
+        generator = torch.Generator()#.manual_seed(56789)
+        for i in range(data.shape[0]):
+            mask = torch.randperm(seq_len, generator=generator)[:int(seq_len * self.missing_rate)].sort().values
+            data[i][mask] = float('nan')
+            features[i][mask] = float('nan')

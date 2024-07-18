@@ -16,7 +16,8 @@ ind = InD(
     root="data",
     train_ratio=0.7, 
     train_batch_size=64, 
-    test_batch_size=1)
+    test_batch_size=1,
+    missing_rate=0.5)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 traj_cnf = TrajFlow(
@@ -24,9 +25,9 @@ traj_cnf = TrajFlow(
     input_dim=2, 
     feature_dim=5, 
     embedding_dim=10,
-    hidden_dims=(64, 64),
+    hidden_dims=(255, 255, 255),
     causal_encoder=CausalEnocder.GRU,
-    flow=Flow.CNF).to(device)
+    flow=Flow.DNF).to(device)
 
 if should_train:
     train(
