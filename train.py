@@ -35,7 +35,7 @@ def train(observation_site, model, epochs, lr, weight_decay, gamma, verbose):
             if verbose:
                 total_loss.append(loss.item())
             losses.append(loss)
-        
+
         losses = torch.stack(losses)
         epoch_loss = torch.mean(torch.mean(losses))
         if not verbose:

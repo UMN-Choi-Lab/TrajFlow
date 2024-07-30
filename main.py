@@ -1,15 +1,13 @@
 import torch
 from InD import InD
-from TrajCNF import TrajCNF
-#from TrajCNF_GRU import TrajCNF_GRU
 from model.TrajFlow import TrajFlow,  CausalEnocder, Flow
 from train import train
 from evaluate import evaluate
 from visualize import visualize
 
 # TODO: these should be arg parsed
-should_train = False
-should_evaluate = False
+should_train = True
+should_evaluate = True
 should_visualize = True
 
 ind = InD(
@@ -25,7 +23,7 @@ traj_cnf = TrajFlow(
     input_dim=2, 
     feature_dim=5, 
     embedding_dim=128,
-    hidden_dims=(256, 256, 256, 256),
+    hidden_dims=(256,256),#(512,512,512),
     causal_encoder=CausalEnocder.GRU,
     flow=Flow.CNF).to(device)
 
@@ -35,7 +33,7 @@ if should_train:
         model=traj_cnf,
         epochs=100,
         lr=1e-3,
-        weight_decay=1e-5,
+        weight_decay=0,#1e-5,
         gamma=0.999,
         verbose=True)
 
@@ -53,4 +51,5 @@ if should_visualize:
         model=traj_cnf,
         num_samples=10,
         steps=100,
+        prob_threshold=0.001,
         output_dir='visualization') 

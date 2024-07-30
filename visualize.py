@@ -36,7 +36,8 @@ def compute_pzt1(model, input, features, grid):
         pz_t1 = torch.cat(pz_t1, dim=0)
         return pz_t1
     
-def generate_video(background_image, grid, pz_t1, observed_traj, unobserved_traj, 
+def generate_video(background_image, grid, pz_t1, prob_threshold,
+                   observed_traj, unobserved_traj, 
                    ortho_px_to_meter, steps, output_dir, i):
     frames_dir = os.path.join(f'{output_dir}', 'frames', f'video{i}')
     makedir(frames_dir)
@@ -54,7 +55,7 @@ def generate_video(background_image, grid, pz_t1, observed_traj, unobserved_traj
     for t in range(100):
         likelihood = pz_t1[:, t].cpu().numpy().reshape(steps, steps)
         likelihood = likelihood / np.max(likelihood)
-        likelihood = np.where(likelihood < 0.001, np.nan, likelihood)
+        likelihood = np.where(likelihood < prob_threshold, np.nan, likelihood)
         generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
                         min_x, max_x, min_y, max_y, t, frames_dir)
 
@@ -93,7 +94,7 @@ def generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
     plt.savefig(frame)
     plt.close()
 
-def visualize(observation_site, model, num_samples, steps, output_dir):
+def visualize(observation_site, model, num_samples, steps, prob_threshold, output_dir):
     makedir(output_dir)
 
     model.eval()
@@ -121,7 +122,7 @@ def visualize(observation_site, model, num_samples, steps, output_dir):
 
         denormalized_grid = observation_site.denormalize(grid.cpu().numpy())
 
-        generate_video(observation_site.background, denormalized_grid, pz_t1,
+        generate_video(observation_site.background, denormalized_grid, pz_t1, prob_threshold,
                        observed_traj, unobserved_traj, ortho_px_to_meter,
                        steps, output_dir, i)
 
