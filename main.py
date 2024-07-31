@@ -6,8 +6,8 @@ from evaluate import evaluate
 from visualize import visualize
 
 # TODO: these should be arg parsed
-should_train = True
-should_evaluate = True
+should_train = False
+should_evaluate = False
 should_visualize = True
 
 ind = InD(
@@ -23,7 +23,7 @@ traj_cnf = TrajFlow(
     input_dim=2, 
     feature_dim=5, 
     embedding_dim=128,
-    hidden_dims=(256,256),#(512,512,512),
+    hidden_dims=(512,512,512,512),
     causal_encoder=CausalEnocder.GRU,
     flow=Flow.CNF).to(device)
 

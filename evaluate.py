@@ -49,8 +49,19 @@ def evaluate(observation_site, model, num_samples=100):
             samples_list = []
             for _ in range(num_samples):
                 _, sample, _ = model.sample(test_input, test_feature)
+                # print('----------')
+                # print(sample.shape)
+                # print('----------')
                 samples_list.append(sample)
             samples = torch.stack(samples_list, dim=1)
+
+            # print(test_target.shape)
+            # print(samples.shape)
+            # print('----------')
+            # print(test_target[0, :])
+            # print('----------')
+            # print(samples[0, 0, :])
+            # print('----------')
 
             rmse_sum += rmse(test_target, samples)
 

@@ -183,7 +183,7 @@ class ODEFunc(nn.Module):
 		#self.mlp = nn.Sequential(*layers)
 		#self.initial_norm = nn.BatchNorm1d(condition_dim)
 		#self.batch_norm = nn.BatchNorm1d(input_dim)
-		self.condition = None
+		#self.condition = None
 
 	def _z_dot(self, t, z, condition):
 		positional_encoding = (torch.cumsum(torch.ones_like(z)[:, :, 0], 1) / z.shape[1]).unsqueeze(-1)
@@ -198,7 +198,8 @@ class ODEFunc(nn.Module):
 		for l, layer in enumerate(self.layers):
 			z_dot = layer(tpc, z_dot)
 			if l < len(self.layers) - 1:
-				z_dot = F.softplus(z_dot)
+				#z_dot = F.softplus(z_dot)
+				z_dot = F.tanh(z_dot)
 		#z_dot = self.mlp(z_dot)
 
 		#batch_size, seq_len, num_features = z_dot.size()
