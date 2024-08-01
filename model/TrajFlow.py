@@ -69,7 +69,11 @@ class TrajFlow(nn.Module):
 	def sample(self, x, feat, num_samples=1):
 		y = torch.stack([self._base_dist.sample().to(x.device) for _ in range(num_samples)])
 		embedding = self._embedding(x, feat)
+		#print(y[0, 0, :])
 		z, delta_logpz = self.flow(y, embedding, reverse=True)
+		#print(z[0, 0, :])
+		#y2, _ = self.flow(z, embedding, reverse=False)
+		#print(y2[0, 0, :])
 		return y, z, delta_logpz
 
 	def log_prob(self, z_t0, delta_logpz):

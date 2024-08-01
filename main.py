@@ -7,7 +7,7 @@ from visualize import visualize
 
 # TODO: these should be arg parsed
 should_train = False
-should_evaluate = False
+should_evaluate = True
 should_visualize = True
 
 ind = InD(

@@ -111,9 +111,6 @@ def visualize(observation_site, model, num_samples, steps, prob_threshold, outpu
         input = inputs[:, :100, ...].to(device)
         target = inputs[:, 100:, ...].to(device)
         features = features[:, :100, ...].to(device)
-        print(target[0])
-        _, sample, _ = model.sample(input, features)
-        print(sample[0])
     
         pz_t1 = compute_pzt1(model, input, features, grid)
 

@@ -83,7 +83,6 @@ class MovingBatchNormNd(nn.Module):
 		# perform normalization
 		used_mean = used_mean.view(*self.shape).expand_as(x)
 		used_var = used_var.view(*self.shape).expand_as(x)
-
 		y = (x - used_mean) * torch.exp(-0.5 * torch.log(used_var + self.eps))
 
 		if self.affine:
@@ -222,9 +221,11 @@ class ODEFunc(nn.Module):
 		condition = states[2]
 
 		with torch.set_grad_enabled(True):
-			z.requires_grad_(True)
+			#z.requires_grad_(True)
 			t.requires_grad_(True)
-			condition.requires_grad_(True)
+			#condition.requires_grad_(True)
+			for state in states:
+				state.requires_grad_(True)
 			z_dot = self._z_dot(t, z, condition)
 			divergence = self._jacobian_trace(z_dot, z)
 
@@ -251,7 +252,7 @@ class CNF(torch.nn.Module):
 		#state = odeint_adjoint(self.time_derivative, (z, delta_logpz), integration_times, method='dopri5', atol=1e-5, rtol=1e-5)
 		condition = self.condition_norm(condition)
 		
-		z, delta_logpz = self.pre_flow_norm(z, delta_logpz, reverse)
+		z, delta_logpz = self.pre_flow_norm(z, delta_logpz, reverse) if not reverse else self.post_flow_norm(z, delta_logpz, reverse)
 		
 		state = odeint_adjoint(self.time_derivative, (z, delta_logpz, condition), integration_times, method='dopri5', atol=1e-5, rtol=1e-5)
 
@@ -259,6 +260,6 @@ class CNF(torch.nn.Module):
 			state = tuple(s[1] for s in state)
 		z, delta_logpz, condition = state
 
-		z, delta_logpz = self.post_flow_norm(z, delta_logpz, reverse)
+		z, delta_logpz = self.post_flow_norm(z, delta_logpz, reverse) if not reverse else self.pre_flow_norm(z, delta_logpz, reverse)
 		return z, delta_logpz.squeeze(-1)
 	
