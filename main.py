@@ -6,7 +6,7 @@ from evaluate import evaluate
 from visualize import visualize
 
 # TODO: these should be arg parsed
-should_train = False
+should_train = True
 should_evaluate = True
 should_visualize = True
 
@@ -24,14 +24,14 @@ traj_cnf = TrajFlow(
     feature_dim=5, 
     embedding_dim=128,
     hidden_dims=(512,512,512,512),
-    causal_encoder=CausalEnocder.GRU,
+    causal_encoder=CausalEnocder.CDE,
     flow=Flow.CNF).to(device)
 
 if should_train:
     train(
         observation_site=ind.observation_site8,
         model=traj_cnf,
-        epochs=100,
+        epochs=15,#100,
         lr=1e-3,
         weight_decay=0,#1e-5,
         gamma=0.999,

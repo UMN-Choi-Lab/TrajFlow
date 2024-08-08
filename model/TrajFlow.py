@@ -27,7 +27,7 @@ def construct_causal_enocder(input_dim, hidden_dim, num_layers, causal_encoder):
 	elif causal_encoder == CausalEnocder.TRANSFORMER:
 		return Transformer(input_dim=input_dim, hidden_dim=hidden_dim, num_layers=num_layers, num_heads=4)
 	elif causal_encoder == CausalEnocder.CDE:
-		return CDE(input_dim=input_dim, embedding_dim=hidden_dim, hidden_dim=128, num_layers=2)
+		return CDE(input_dim=input_dim, embedding_dim=hidden_dim, hidden_dim=512, num_layers=4)
 	else:
 		raise ValueError(f'{causal_encoder.name} is not a supported causal encoder')
 
@@ -69,11 +69,7 @@ class TrajFlow(nn.Module):
 	def sample(self, x, feat, num_samples=1):
 		y = torch.stack([self._base_dist.sample().to(x.device) for _ in range(num_samples)])
 		embedding = self._embedding(x, feat)
-		#print(y[0, 0, :])
 		z, delta_logpz = self.flow(y, embedding, reverse=True)
-		#print(z[0, 0, :])
-		#y2, _ = self.flow(z, embedding, reverse=False)
-		#print(y2[0, 0, :])
 		return y, z, delta_logpz
 
 	def log_prob(self, z_t0, delta_logpz):
