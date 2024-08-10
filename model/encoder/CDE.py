@@ -90,7 +90,6 @@ class CDEFunc(nn.Module):
 		for i in range(len(dim_list) - 1):
 			layers.append(nn.Linear(dim_list[i], dim_list[i + 1]))
 			if i < len(dim_list) - 2:
-				#layers.append(nn.LayerNorm(dim_list[i + 1]))
 				layers.append(nn.ReLU())
 		self.mlp = nn.Sequential(*layers)
 	

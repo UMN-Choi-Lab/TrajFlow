@@ -3,9 +3,7 @@ import os
 import torch
 import matplotlib.pyplot as plt
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-def train(observation_site, model, epochs, lr, weight_decay, gamma, verbose):
+def train(observation_site, model, epochs, lr, weight_decay, gamma, verbose, device):
     model.train()
 
     optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -42,14 +40,13 @@ def train(observation_site, model, epochs, lr, weight_decay, gamma, verbose):
             total_loss.append(epoch_loss.item())
         print(f"epoch: {epoch}, loss: {epoch_loss:.4f}")
 
-    loss_visual = 'loss.png'
+    if verbose:
+        loss_visual = 'loss.png'
 
-    if os.path.exists(loss_visual):
-        os.remove(loss_visual)
-
-    plt.plot(total_loss)
-    plt.savefig(loss_visual)
-    plt.close()
-
-    torch.save(model.state_dict(), 'traj_cnf.pt')
+        if os.path.exists(loss_visual):
+            os.remove(loss_visual)
+        
+        plt.plot(total_loss)
+        plt.savefig(loss_visual)
+        plt.close()
     

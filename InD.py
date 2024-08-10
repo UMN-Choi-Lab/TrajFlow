@@ -49,9 +49,133 @@ class InD():
         self.observation_sites = {}
 
     @property
+    def observation_site1(self):
+        return self._get_observation_site("01")
+    
+    @property
+    def observation_site2(self):
+        return self._get_observation_site("02")
+    
+    @property
+    def observation_site3(self):
+        return self._get_observation_site("03")
+    
+    @property
+    def observation_site4(self):
+        return self._get_observation_site("04")
+    
+    @property
+    def observation_site5(self):
+        return self._get_observation_site("05")
+    
+    @property
+    def observation_site6(self):
+        return self._get_observation_site("06")
+    
+    @property
+    def observation_site7(self):
+        return self._get_observation_site("07")
+
+    @property
     def observation_site8(self):
         return self._get_observation_site("08")
     
+    @property
+    def observation_site9(self):
+        return self._get_observation_site("09")
+    
+    @property
+    def observation_site10(self):
+        return self._get_observation_site("10")
+    
+    @property
+    def observation_site11(self):
+        return self._get_observation_site("11")
+    
+    @property
+    def observation_site12(self):
+        return self._get_observation_site("12")
+    
+    @property
+    def observation_site13(self):
+        return self._get_observation_site("13")
+    
+    @property
+    def observation_site14(self):
+        return self._get_observation_site("14")
+    
+    @property
+    def observation_site15(self):
+        return self._get_observation_site("15")
+    
+    @property
+    def observation_site16(self):
+        return self._get_observation_site("16")
+    
+    @property
+    def observation_site17(self):
+        return self._get_observation_site("17")
+    
+    @property
+    def observation_site18(self):
+        return self._get_observation_site("18")
+    
+    @property
+    def observation_site19(self):
+        return self._get_observation_site("19")
+    
+    @property
+    def observation_site20(self):
+        return self._get_observation_site("20")
+    
+    @property
+    def observation_site21(self):
+        return self._get_observation_site("21")
+    
+    @property
+    def observation_site22(self):
+        return self._get_observation_site("22")
+    
+    @property
+    def observation_site23(self):
+        return self._get_observation_site("23")
+    
+    @property
+    def observation_site24(self):
+        return self._get_observation_site("24")
+    
+    @property
+    def observation_site25(self):
+        return self._get_observation_site("25")
+    
+    @property
+    def observation_site26(self):
+        return self._get_observation_site("26")
+    
+    @property
+    def observation_site27(self):
+        return self._get_observation_site("27")
+
+    @property
+    def observation_site28(self):
+        return self._get_observation_site("28")
+
+    @property
+    def observation_site29(self):
+        return self._get_observation_site("29")
+    
+    @property
+    def observation_site30(self):
+        return self._get_observation_site("30")
+    
+    @property
+    def observation_site31(self):
+        return self._get_observation_site("31")
+    
+    @property
+    def observation_site32(self):
+        return self._get_observation_site("32")
+
     def _get_observation_site(self, site):
         if site not in self.observation_sites:
             self.observation_sites[site] = self._load_observation_site(site)
@@ -61,13 +185,17 @@ class InD():
         input, features, ortho_px_to_meter = self._parse(observation_site)
         background = os.path.join(f'{self.root}', f'{observation_site}_background.png')
 
-        boundaries = np.array([
-            [np.min(input[:, :, 0]), np.max(input[:, :, 0])], 
-            [np.min(input[:, :, 1]), np.max(input[:, :, 1])
-        ]])
+        #boundaries = np.array([
+        #    [np.min(input[:, :, 0]), np.max(input[:, :, 0])], 
+        #    [np.min(input[:, :, 1]), np.max(input[:, :, 1])]
+        #])
+        spatial_boundaries = np.array([[25, 85], [-65, -10]])
+        #print('spatial norm boundaries')
+        #print(boundaries)
         feature_boundaries = np.array([[0, 360], [-10, 10], [-10, 10], [-5, 5], [-5, 5]])
 
-        input = normalize(input, boundaries)
+        input = normalize(input, spatial_boundaries)
+        #input = normalize(input, boundaries)
         features = normalize(features, feature_boundaries)
 
         randidx = np.random.permutation(input.shape[0])
@@ -92,7 +220,8 @@ class InD():
 
         train_loader = DataLoader(dataset=train_data, batch_size=self.train_batch_size, shuffle=True)
         test_loader = DataLoader(dataset=test_data, batch_size=self.test_batch_size, shuffle=True)
-        return InDObservationSite(background, ortho_px_to_meter, boundaries, train_loader, test_loader)
+        #return InDObservationSite(background, ortho_px_to_meter, boundaries, train_loader, test_loader)
+        return InDObservationSite(background, ortho_px_to_meter, spatial_boundaries, train_loader, test_loader)
     
     def _parse(self, observation_site):
         recording_metadata = pd.read_csv(os.path.join(f'{self.root}', f'{observation_site}_recordingMeta.csv'))

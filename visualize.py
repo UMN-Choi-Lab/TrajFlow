@@ -4,8 +4,6 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 def makedir(directory):
     try:
         if os.path.exists(directory):
@@ -94,7 +92,7 @@ def generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
     plt.savefig(frame)
     plt.close()
 
-def visualize(observation_site, model, num_samples, steps, prob_threshold, output_dir):
+def visualize(observation_site, model, num_samples, steps, prob_threshold, output_dir, device):
     makedir(output_dir)
 
     model.eval()

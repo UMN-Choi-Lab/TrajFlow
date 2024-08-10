@@ -1,6 +1,7 @@
 __pycache__/
 data/
 visualization/
+wandb/
 
 *.exe
 *.mp4

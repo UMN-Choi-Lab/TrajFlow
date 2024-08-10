@@ -8,8 +8,8 @@ class GRU(nn.Module):
 		self.gru = nn.GRU(input_dim, hidden_dim, num_layers, batch_first=True)
 
 	def forward(self, t, x):
-		#imputed = self._forward_imputation(t, x)
-		imputed = x	
+		imputed = self._forward_imputation(t, x)
+		#imputed = x	
 		embedding, _ = self.gru(imputed)
 		return embedding[:, -1, :]
 	

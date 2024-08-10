@@ -1,8 +1,5 @@
 import torch
 import torch.nn.functional as F
-import math
-
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def crps(y_true, samples):
     abs_diff = torch.abs(samples - y_true.unsqueeze(1))
@@ -32,7 +29,7 @@ def rmse(y_true, samples):
     rmse = torch.sqrt(mse)
     return rmse
 
-def evaluate(observation_site, model, num_samples=100):
+def evaluate(observation_site, model, num_samples, device):
     model.eval()
 
     with torch.no_grad():
@@ -49,33 +46,17 @@ def evaluate(observation_site, model, num_samples=100):
             samples_list = []
             for _ in range(num_samples):
                 _, sample, _ = model.sample(test_input, test_feature)
-                # print('----------')
-                # print(sample.shape)
-                # print('----------')
                 samples_list.append(sample)
             samples = torch.stack(samples_list, dim=1)
 
-            # print(test_target.shape)
-            # print(samples.shape)
-            # print('----------')
-            # print(test_target[0, :])
-            # print('----------')
-            # print(samples[0, 0, :])
-            # print('----------')
-
             rmse_sum += rmse(test_target, samples)
-
             crps_sum += crps(test_target, samples)
-
             #crps2_sum += crps_torch(test_target, samples)
-
             count += 1
 
         rmse_score = rmse_sum / count
         crps_score = crps_sum / count
-        crps2_score = crps2_sum / count
-        print(f'RMSE: {rmse_score}')
-        print(f'CRPS: {crps_score}')
-        print(f'CRPS2: {crps2_score}')
+        #crps2_score = crps2_sum / count
+        #print(f'CRPS2: {crps2_score}')
 
     return rmse_score, crps_score
