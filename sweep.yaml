@@ -1,0 +1,14 @@
+program: main.py
+method: grid
+metric:
+  name: crps
+  goal: minimize
+parameters:
+  encoder:
+    values: [GRU, CDE]
+  flow:
+    values: [DNF, CNF]
+  masked_data_ratio: 
+    values: [0, 0.3, 0.5, 0.7]
+  seed:     
+    values: [55433, 125794]
