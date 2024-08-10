@@ -8,9 +8,9 @@ from train import train
 from evaluate import evaluate
 from visualize import visualize
 
-should_train = False
+should_train = True
 should_serialize = False
-should_evaluate = False
+should_evaluate = True
 should_visualize = False
 verbose = False
 
@@ -49,8 +49,9 @@ with wandb.init() as run:
 
 	start_time = time.time()
 
+	total_loss = []
 	if should_train:
-		train(
+		total_loss = train(
 			observation_site=ind_train.observation_site7,
 			model=traj_flow,
 			epochs=25,#100,
@@ -64,8 +65,8 @@ with wandb.init() as run:
 	runtime = end_time - start_time
 	wandb.log({'runtime': runtime})
 		
-	for i in range(100):
-		wandb.log({'loss': i})
+	for loss in total_loss:
+		wandb.log({'loss': loss})
 			
 	if should_serialize:
 		model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
@@ -83,8 +84,7 @@ with wandb.init() as run:
 		if verbose:
 			print(f'RMSE: {rmse}')
 			print(f'crps: {crps}')
-		wandb.log({'rmse': rmse, 'crps': crps}) 
-	wandb.log({'rmse': random.randint(0, 10), 'crps': random.randint(0, 10)})
+		wandb.log({'rmse': rmse, 'crps': crps})
 
 	if should_visualize:
 		visualize(

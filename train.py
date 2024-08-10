@@ -1,6 +1,5 @@
 
 import os
-import wandb
 import torch
 import matplotlib.pyplot as plt
 
@@ -40,7 +39,6 @@ def train(observation_site, model, epochs, lr, weight_decay, gamma, verbose, dev
         if not verbose:
             total_loss.append(epoch_loss.item())
         print(f"epoch: {epoch}, loss: {epoch_loss:.4f}")
-        wandb.log({'loss': epoch_loss})
 
 
     if verbose:
@@ -52,4 +50,6 @@ def train(observation_site, model, epochs, lr, weight_decay, gamma, verbose, dev
         plt.plot(total_loss)
         plt.savefig(loss_visual)
         plt.close()
+
+    return total_loss
     
