@@ -1,4 +1,5 @@
 import random
+import time
 import wandb
 import torch
 from InD import InD
@@ -11,6 +12,7 @@ should_train = False
 should_serialize = False
 should_evaluate = False
 should_visualize = False
+verbose = False
 
 with wandb.init() as run:
 	run.config.setdefaults({
@@ -20,11 +22,6 @@ with wandb.init() as run:
 		'seed': random.randint(0, 2**32 - 1)
 	})
 	torch.manual_seed(run.config.seed)
-
-	print(run.config.encoder)
-	print(run.config.flow)
-	print(run.config.masked_data_ratio)
-	print(run.config.seed)
 
 	ind_train = InD(
 		root="data",
@@ -50,6 +47,8 @@ with wandb.init() as run:
 		causal_encoder=CausalEnocder[run.config.encoder],
 		flow=Flow[run.config.flow]).to(device)
 
+	start_time = time.time()
+
 	if should_train:
 		train(
 			observation_site=ind_train.observation_site7,
@@ -58,8 +57,15 @@ with wandb.init() as run:
 			lr=1e-3,
 			weight_decay=0,#1e-5,
 			gamma=0.999,
-			verbose=False,
+			verbose=verbose,
 			device=device)
+		
+	end_time = time.time()
+	runtime = end_time - start_time
+	wandb.log({'runtime': runtime})
+		
+	for i in range(100):
+		wandb.log({'loss': i})
 			
 	if should_serialize:
 		model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
@@ -73,8 +79,10 @@ with wandb.init() as run:
 			model=traj_flow,
 			num_samples=1,
 			device=device)
-		print(f'RMSE: {rmse}')
-		print(f'crps: {crps}')
+		
+		if verbose:
+			print(f'RMSE: {rmse}')
+			print(f'crps: {crps}')
 		wandb.log({'rmse': rmse, 'crps': crps}) 
 	wandb.log({'rmse': random.randint(0, 10), 'crps': random.randint(0, 10)})
 
