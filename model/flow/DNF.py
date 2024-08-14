@@ -124,23 +124,7 @@ class DNF(nn.Module):
             modules += batch_norm * [RunningAverageBatchNorm(input_size)]
 
         self.net = SequentialFlow(*modules)
-
-    #     self.register_buffer("base_dist_mean", torch.zeros(num_pred, input_size))
-    #     self.register_buffer("base_dist_var", torch.ones(num_pred, input_size))
-
-    # @property
-    # def base_dist(self):
-    #     return Normal(self.base_dist_mean, self.base_dist_var)
     
     def forward(self, z, condition, reverse=False):
         z, delta_logpz = self.net.inverse(z, condition) if reverse else self.net.forward(z, condition)
         return z, torch.sum(-delta_logpz, dim=-1) #Negative to match CNF formulation
-
-    # def log_prob(self, x, cond):
-    #     u, sum_log_abs_det_jacobians = self.net.forward(x, cond)
-    #     return torch.sum(self.base_dist.log_prob(u) + sum_log_abs_det_jacobians, dim=-1)
-
-    # def sample(self, cond):
-    #     u = self.base_dist.sample()
-    #     sample, _ = self.net.inverse(u, cond)
-    #     return sample

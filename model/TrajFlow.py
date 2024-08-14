@@ -27,7 +27,7 @@ def construct_causal_enocder(input_dim, hidden_dim, num_layers, causal_encoder):
 	elif causal_encoder == CausalEnocder.TRANSFORMER:
 		return Transformer(input_dim=input_dim, hidden_dim=hidden_dim, num_layers=num_layers, num_heads=4)
 	elif causal_encoder == CausalEnocder.CDE:
-		return CDE(input_dim=input_dim, embedding_dim=hidden_dim, hidden_dim=128, num_layers=2)
+		return CDE(input_dim=input_dim, embedding_dim=hidden_dim, hidden_dim=512, num_layers=4)
 	else:
 		raise ValueError(f'{causal_encoder.name} is not a supported causal encoder')
 

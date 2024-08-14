@@ -23,12 +23,19 @@ with wandb.init() as run:
 	})
 	torch.manual_seed(run.config.seed)
 
+	# ind_train = InD(
+	# 	root="data",
+	# 	train_ratio=0.9999, 
+	# 	train_batch_size=64, 
+	# 	test_batch_size=1,
+	# 	missing_rate=run.config.masked_data_ratio)
 	ind_train = InD(
 		root="data",
-		train_ratio=0.9999, 
+		train_ratio=0.7, 
 		train_batch_size=64, 
 		test_batch_size=1,
 		missing_rate=run.config.masked_data_ratio)
+	train_observation_site = ind_train.observation_site7
 
 	ind_test = InD(
 		root="data",
@@ -36,6 +43,8 @@ with wandb.init() as run:
 		train_batch_size=64, 
 		test_batch_size=1,
 		missing_rate=run.config.masked_data_ratio)
+	#test_observation_site = ind_test.observation_site8
+	test_observation_site = train_observation_site
 
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 	traj_flow = TrajFlow(
@@ -43,7 +52,7 @@ with wandb.init() as run:
 		input_dim=2, 
 		feature_dim=5, 
 		embedding_dim=128,
-		hidden_dims=(128,128),#(512,512,512,512),
+		hidden_dims=(512,512,512,512),
 		causal_encoder=CausalEnocder[run.config.encoder],
 		flow=Flow[run.config.flow]).to(device)
 
@@ -52,7 +61,7 @@ with wandb.init() as run:
 	total_loss = []
 	if should_train:
 		total_loss = train(
-			observation_site=ind_train.observation_site7,
+			observation_site=train_observation_site,
 			model=traj_flow,
 			epochs=25,#100,
 			lr=1e-3,
@@ -76,19 +85,19 @@ with wandb.init() as run:
 
 	if should_evaluate:
 		rmse, crps = evaluate(
-			observation_site=ind_test.observation_site8,
+			observation_site=test_observation_site,
 			model=traj_flow,
 			num_samples=100,
 			device=device)
 		
 		if verbose:
-			print(f'RMSE: {rmse}')
+			print(f'rmse: {rmse}')
 			print(f'crps: {crps}')
 		wandb.log({'rmse': rmse, 'crps': crps})
 
 	if should_visualize:
 		visualize(
-			observation_site=ind_test.observation_site8,
+			observation_site=test_observation_site,
 			model=traj_flow,
 			num_samples=10,
 			steps=100,
