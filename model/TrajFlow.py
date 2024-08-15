@@ -27,14 +27,14 @@ def construct_causal_enocder(input_dim, hidden_dim, num_layers, causal_encoder):
 	elif causal_encoder == CausalEnocder.TRANSFORMER:
 		return Transformer(input_dim=input_dim, hidden_dim=hidden_dim, num_layers=num_layers, num_heads=4)
 	elif causal_encoder == CausalEnocder.CDE:
-		return CDE(input_dim=input_dim, embedding_dim=hidden_dim, hidden_dim=512, num_layers=4)
+		return CDE(input_dim=input_dim, embedding_dim=hidden_dim, hidden_dim=512, num_layers=num_layers)
 	else:
 		raise ValueError(f'{causal_encoder.name} is not a supported causal encoder')
 
 
 def construct_flow(input_dim, condition_dim, hidden_dims, flow):
 	if flow == Flow.DNF:
-		return DNF(n_blocks=3, input_size=input_dim, hidden_size=32, n_hidden=10, num_pred=100, cond_label_size=condition_dim)
+		return DNF(n_blocks=3, input_size=input_dim, hidden_size=512, n_hidden=10, num_pred=100, cond_label_size=condition_dim)
 	elif flow == Flow.CNF:
 		return CNF(input_dim, condition_dim, hidden_dims)
 	else:
@@ -44,7 +44,7 @@ def construct_flow(input_dim, condition_dim, hidden_dims, flow):
 class TrajFlow(nn.Module):
 	def __init__(self, seq_len, input_dim, feature_dim, embedding_dim, hidden_dims, causal_encoder, flow):
 		super(TrajFlow, self).__init__()
-		self.causal_encoder = construct_causal_enocder(input_dim + feature_dim, embedding_dim, 3, causal_encoder)
+		self.causal_encoder = construct_causal_enocder(input_dim + feature_dim, embedding_dim, 4, causal_encoder)
 		self.flow = construct_flow(input_dim, embedding_dim, hidden_dims, flow)
 
 		self.register_buffer("base_dist_mean", torch.zeros(seq_len, input_dim))

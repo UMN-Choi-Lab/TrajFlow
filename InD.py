@@ -183,19 +183,14 @@ class InD():
 
     def _load_observation_site(self, observation_site):
         input, features, ortho_px_to_meter = self._parse(observation_site)
+        print(input.shape)
+        print(features.shape)
         background = os.path.join(f'{self.root}', f'{observation_site}_background.png')
 
-        #boundaries = np.array([
-        #    [np.min(input[:, :, 0]), np.max(input[:, :, 0])], 
-        #    [np.min(input[:, :, 1]), np.max(input[:, :, 1])]
-        #])
         spatial_boundaries = np.array([[25, 85], [-65, -10]])
-        #print('spatial norm boundaries')
-        #print(boundaries)
         feature_boundaries = np.array([[0, 360], [-10, 10], [-10, 10], [-5, 5], [-5, 5]])
 
         input = normalize(input, spatial_boundaries)
-        #input = normalize(input, boundaries)
         features = normalize(features, feature_boundaries)
 
         randidx = np.random.permutation(input.shape[0])

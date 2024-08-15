@@ -11,13 +11,13 @@ from visualize import visualize
 should_train = True
 should_serialize = False
 should_evaluate = True
-should_visualize = False
-verbose = False
+should_visualize = True
+verbose = True
 
 with wandb.init() as run:
 	run.config.setdefaults({
-		'encoder': 'CDE',
-		'flow': 'CNF',
+		'encoder': 'GRU',
+		'flow': 'DNF',
 		'masked_data_ratio': 0.5,
 		'seed': random.randint(0, 2**32 - 1)
 	})
@@ -51,10 +51,12 @@ with wandb.init() as run:
 		seq_len=100, 
 		input_dim=2, 
 		feature_dim=5, 
-		embedding_dim=128,
+		embedding_dim=512,
 		hidden_dims=(512,512,512,512),
 		causal_encoder=CausalEnocder[run.config.encoder],
 		flow=Flow[run.config.flow]).to(device)
+	num_parameters = sum(p.numel() for p in traj_flow.parameters() if p.requires_grad)
+	wandb.log({'parameters': num_parameters})
 
 	start_time = time.time()
 
