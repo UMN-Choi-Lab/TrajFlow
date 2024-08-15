@@ -11,8 +11,16 @@ from visualize import visualize
 should_train = True
 should_serialize = False
 should_evaluate = True
-should_visualize = True
+should_visualize = False
 verbose = True
+
+ind_train = InD(
+	root="data",
+	train_ratio=0.6, 
+	train_batch_size=64, 
+	test_batch_size=1,
+	missing_rate=0)
+ind_train.observation_site1
 
 with wandb.init() as run:
 	run.config.setdefaults({
@@ -23,28 +31,12 @@ with wandb.init() as run:
 	})
 	torch.manual_seed(run.config.seed)
 
-	# ind_train = InD(
-	# 	root="data",
-	# 	train_ratio=0.9999, 
-	# 	train_batch_size=64, 
-	# 	test_batch_size=1,
-	# 	missing_rate=run.config.masked_data_ratio)
-	ind_train = InD(
+	ind = InD(
 		root="data",
-		train_ratio=0.7, 
+		train_ratio=0.6, 
 		train_batch_size=64, 
 		test_batch_size=1,
 		missing_rate=run.config.masked_data_ratio)
-	train_observation_site = ind_train.observation_site7
-
-	ind_test = InD(
-		root="data",
-		train_ratio=0.0001, 
-		train_batch_size=64, 
-		test_batch_size=1,
-		missing_rate=run.config.masked_data_ratio)
-	#test_observation_site = ind_test.observation_site8
-	test_observation_site = train_observation_site
 
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 	traj_flow = TrajFlow(
@@ -63,7 +55,7 @@ with wandb.init() as run:
 	total_loss = []
 	if should_train:
 		total_loss = train(
-			observation_site=train_observation_site,
+			observation_site=ind.observation_site1,
 			model=traj_flow,
 			epochs=25,#100,
 			lr=1e-3,
@@ -87,7 +79,7 @@ with wandb.init() as run:
 
 	if should_evaluate:
 		rmse, crps = evaluate(
-			observation_site=test_observation_site,
+			observation_site=ind.observation_site1,
 			model=traj_flow,
 			num_samples=100,
 			device=device)
@@ -99,7 +91,7 @@ with wandb.init() as run:
 
 	if should_visualize:
 		visualize(
-			observation_site=test_observation_site,
+			observation_site=ind.observation_site1,
 			model=traj_flow,
 			num_samples=10,
 			steps=100,

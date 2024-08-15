@@ -50,172 +50,67 @@ class InD():
 
     @property
     def observation_site1(self):
-        return self._get_observation_site("01")
-    
-    @property
-    def observation_site2(self):
-        return self._get_observation_site("02")
-    
-    @property
-    def observation_site3(self):
-        return self._get_observation_site("03")
-    
-    @property
-    def observation_site4(self):
-        return self._get_observation_site("04")
-    
-    @property
-    def observation_site5(self):
-        return self._get_observation_site("05")
-    
-    @property
-    def observation_site6(self):
-        return self._get_observation_site("06")
-    
-    @property
-    def observation_site7(self):
-        return self._get_observation_site("07")
+        return self._get_observation_site(["07", "08", "09", "10"])
 
-    @property
-    def observation_site8(self):
-        return self._get_observation_site("08")
-    
-    @property
-    def observation_site9(self):
-        return self._get_observation_site("09")
-    
-    @property
-    def observation_site10(self):
-        return self._get_observation_site("10")
-    
-    @property
-    def observation_site11(self):
-        return self._get_observation_site("11")
-    
-    @property
-    def observation_site12(self):
-        return self._get_observation_site("12")
-    
-    @property
-    def observation_site13(self):
-        return self._get_observation_site("13")
-    
-    @property
-    def observation_site14(self):
-        return self._get_observation_site("14")
-    
-    @property
-    def observation_site15(self):
-        return self._get_observation_site("15")
-    
-    @property
-    def observation_site16(self):
-        return self._get_observation_site("16")
-    
-    @property
-    def observation_site17(self):
-        return self._get_observation_site("17")
-    
-    @property
-    def observation_site18(self):
-        return self._get_observation_site("18")
-    
-    @property
-    def observation_site19(self):
-        return self._get_observation_site("19")
-    
-    @property
-    def observation_site20(self):
-        return self._get_observation_site("20")
-    
-    @property
-    def observation_site21(self):
-        return self._get_observation_site("21")
-    
-    @property
-    def observation_site22(self):
-        return self._get_observation_site("22")
-    
-    @property
-    def observation_site23(self):
-        return self._get_observation_site("23")
-    
-    @property
-    def observation_site24(self):
-        return self._get_observation_site("24")
-    
-    @property
-    def observation_site25(self):
-        return self._get_observation_site("25")
-    
-    @property
-    def observation_site26(self):
-        return self._get_observation_site("26")
-    
-    @property
-    def observation_site27(self):
-        return self._get_observation_site("27")
+    def _get_observation_site(self, sites):
+        key = '-'.join(sites)
+        if key not in self.observation_sites:
+            self.observation_sites[key] = self._load_observation_site(sites)
+        return self.observation_sites[key]
 
-    @property
-    def observation_site28(self):
-        return self._get_observation_site("28")
-
-    @property
-    def observation_site29(self):
-        return self._get_observation_site("29")
-    
-    @property
-    def observation_site30(self):
-        return self._get_observation_site("30")
-    
-    @property
-    def observation_site31(self):
-        return self._get_observation_site("31")
-    
-    @property
-    def observation_site32(self):
-        return self._get_observation_site("32")
-
-    def _get_observation_site(self, site):
-        if site not in self.observation_sites:
-            self.observation_sites[site] = self._load_observation_site(site)
-        return self.observation_sites[site]
-
-    def _load_observation_site(self, observation_site):
-        input, features, ortho_px_to_meter = self._parse(observation_site)
-        print(input.shape)
-        print(features.shape)
-        background = os.path.join(f'{self.root}', f'{observation_site}_background.png')
+    def _load_observation_site(self, observation_sites):
+        background = os.path.join(f'{self.root}', f'{observation_sites[0]}_background.png')
 
         spatial_boundaries = np.array([[25, 85], [-65, -10]])
         feature_boundaries = np.array([[0, 360], [-10, 10], [-10, 10], [-5, 5], [-5, 5]])
 
-        input = normalize(input, spatial_boundaries)
-        features = normalize(features, feature_boundaries)
+        ortho_px_to_meter = 0
 
-        randidx = np.random.permutation(input.shape[0])
-        n_data = len(randidx)
-        n_train = int(n_data * self.train_ratio)
-        n_test = n_data - n_train
+        train_inputs = []
+        test_inputs = []
 
-        train_idx = randidx[:n_train]
-        test_idx = randidx[n_train:(n_train+n_test)]
+        train_features = []
+        test_features = []
 
-        train_input = torch.FloatTensor(input[train_idx])
-        test_input = torch.FloatTensor(input[test_idx])
+        for observation_site in observation_sites:
+            input, features, ortho_px_to_meter = self._parse(observation_site)
+            input = normalize(input, spatial_boundaries)
+            features = normalize(features, feature_boundaries)
 
-        train_feature = torch.FloatTensor(features[train_idx])
-        test_feature = torch.FloatTensor(features[test_idx])
+            randidx = np.random.permutation(input.shape[0])
+            n_data = len(randidx)
+            n_train = int(n_data * self.train_ratio)
+            n_test = n_data - n_train
 
-        self._mask(train_input, train_feature)
-        self._mask(test_input, test_feature)
+            train_idx = randidx[:n_train]
+            test_idx = randidx[n_train:(n_train+n_test)]
+
+            train_input = torch.FloatTensor(input[train_idx])
+            test_input = torch.FloatTensor(input[test_idx])
+
+            train_feature = torch.FloatTensor(features[train_idx])
+            test_feature = torch.FloatTensor(features[test_idx])
+
+            self._mask(train_input, train_feature)
+            self._mask(test_input, test_feature)
+
+            train_inputs.append(train_input)
+            test_inputs.append(test_input)
+
+            train_features.append(train_feature)
+            test_features.append(test_feature)
+
+        train_input = torch.cat(train_inputs, dim=0)
+        train_feature = torch.cat(train_features, dim=0)
+
+        test_input = torch.cat(test_inputs, dim=0)
+        test_feature = torch.cat(test_features, dim=0)
 
         train_data = InDDataset(train_input, train_feature)
         test_data = InDDataset(test_input, test_feature)
 
         train_loader = DataLoader(dataset=train_data, batch_size=self.train_batch_size, shuffle=True)
         test_loader = DataLoader(dataset=test_data, batch_size=self.test_batch_size, shuffle=True)
-        #return InDObservationSite(background, ortho_px_to_meter, boundaries, train_loader, test_loader)
         return InDObservationSite(background, ortho_px_to_meter, spatial_boundaries, train_loader, test_loader)
     
     def _parse(self, observation_site):
