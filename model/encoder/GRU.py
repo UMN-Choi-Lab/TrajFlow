@@ -4,14 +4,28 @@ import torch.nn as nn
 class GRU(nn.Module):
 	def __init__(self, input_dim, hidden_dim, num_layers):
 		super(GRU, self).__init__()
-		self.gru = nn.GRU(input_dim + 2, hidden_dim, num_layers, batch_first=True)
+		#self.gru = nn.GRU(input_dim + 2, hidden_dim, num_layers, batch_first=True)
+		self.gru = nn.GRU(input_dim + 1, hidden_dim, num_layers, batch_first=True)
 		#self.gru = nn.GRU(input_dim, hidden_dim, num_layers, batch_first=True)
 
 	def forward(self, t, x):
-		imputed = self._forward_imputation(t, x)
+		imputed = self._baseline(t, x)
+		#imputed = self._forward_imputation(t, x)
 		#imputed = x	
 		embedding, _ = self.gru(imputed)
 		return embedding[:, -1, :]
+	
+	def _baseline(Self, t, x):
+		batch_size, seq_len, num_features = x.shape
+		mask = ~torch.isnan(x)
+		x = x[mask]
+		x = x.view(batch_size, int(x.shape[0] / (batch_size * num_features)), num_features)
+		t = t.unsqueeze(0).unsqueeze(-1)
+		t = t.expand(batch_size, seq_len, 1)
+		t = t[mask[:, :, 0]]
+		t = t.view(batch_size, int(t.shape[0] / batch_size), 1)
+		imputed = torch.cat([x, t], dim=-1)
+		return imputed
 	
 	def _forward_imputation(self, t, x): # TODO: this is bad
 		batch_size, seq_len, _ = x.shape

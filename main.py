@@ -16,7 +16,7 @@ verbose = True
 
 ind_train = InD(
 	root="data",
-	train_ratio=0.6, 
+	train_ratio=0.5, 
 	train_batch_size=64, 
 	test_batch_size=1,
 	missing_rate=0)
@@ -43,7 +43,7 @@ with wandb.init() as run:
 		seq_len=100, 
 		input_dim=2, 
 		feature_dim=5, 
-		embedding_dim=512,
+		embedding_dim=128,
 		hidden_dims=(512,512,512,512),
 		causal_encoder=CausalEnocder[run.config.encoder],
 		flow=Flow[run.config.flow]).to(device)
