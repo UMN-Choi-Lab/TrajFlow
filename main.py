@@ -12,7 +12,7 @@ should_train = True
 should_serialize = False
 should_evaluate = True
 should_visualize = False
-verbose = True
+verbose = False
 
 ind_train = InD(
 	root="data",
