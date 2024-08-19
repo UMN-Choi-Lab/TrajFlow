@@ -12,15 +12,7 @@ should_train = True
 should_serialize = False
 should_evaluate = True
 should_visualize = False
-verbose = True
-
-ind_train = InD(
-	root="data",
-	train_ratio=0.75, 
-	train_batch_size=64, 
-	test_batch_size=1,
-	missing_rate=0)
-ind_train.observation_site1
+verbose = False
 
 with wandb.init() as run:
 	run.config.setdefaults({
@@ -33,7 +25,7 @@ with wandb.init() as run:
 
 	ind = InD(
 		root="data",
-		train_ratio=0.6, 
+		train_ratio=0.75, 
 		train_batch_size=64, 
 		test_batch_size=1,
 		missing_rate=run.config.masked_data_ratio)
