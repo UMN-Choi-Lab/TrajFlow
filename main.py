@@ -12,11 +12,11 @@ should_train = True
 should_serialize = False
 should_evaluate = True
 should_visualize = False
-verbose = False
+verbose = True
 
 ind_train = InD(
 	root="data",
-	train_ratio=0.5, 
+	train_ratio=0.75, 
 	train_batch_size=64, 
 	test_batch_size=1,
 	missing_rate=0)
@@ -26,7 +26,7 @@ with wandb.init() as run:
 	run.config.setdefaults({
 		'encoder': 'GRU',
 		'flow': 'DNF',
-		'masked_data_ratio': 0.5,
+		'masked_data_ratio': 0,
 		'seed': random.randint(0, 2**32 - 1)
 	})
 	torch.manual_seed(run.config.seed)
