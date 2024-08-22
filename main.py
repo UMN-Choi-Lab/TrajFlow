@@ -12,14 +12,15 @@ should_train = True
 should_serialize = False
 should_evaluate = True
 should_visualize = False
-verbose = False
+verbose = True
 
 with wandb.init() as run:
 	run.config.setdefaults({
+		'seed': random.randint(0, 2**32 - 1),
+		'hidden_dim': 512,
 		'encoder': 'GRU',
-		'flow': 'DNF',
-		'masked_data_ratio': 0,
-		'seed': random.randint(0, 2**32 - 1)
+		'flow': 'CNF',
+		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
 
@@ -36,7 +37,7 @@ with wandb.init() as run:
 		input_dim=2, 
 		feature_dim=5, 
 		embedding_dim=128,
-		hidden_dims=(512,512,512,512),
+		hidden_dim=run.config.hidden_dim,
 		causal_encoder=CausalEnocder[run.config.encoder],
 		flow=Flow[run.config.flow]).to(device)
 	num_parameters = sum(p.numel() for p in traj_flow.parameters() if p.requires_grad)
