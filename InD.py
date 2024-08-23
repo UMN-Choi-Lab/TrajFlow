@@ -50,7 +50,8 @@ class InD():
 
     @property
     def observation_site1(self):
-        return self._get_observation_site(["07", "08", "09", "10"])
+        #return self._get_observation_site(["07", "08", "09", "10"])
+        return self._get_observation_site(["08"])
 
     def _get_observation_site(self, sites):
         key = '-'.join(sites)
