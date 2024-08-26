@@ -8,9 +8,9 @@ from train import train
 from evaluate import evaluate
 from visualize import visualize
 
-should_train = False
+should_train = True
 should_serialize = False
-should_evaluate = False
+should_evaluate = True
 should_visualize = False
 verbose = False
 
