@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 from model.encoder.GRU import GRU
@@ -57,7 +58,8 @@ class TrajFlow(nn.Module):
 	def _embedding(self, x, feat):
 		_, seq_length, _ = x.shape
 		x = torch.cat([x, feat], dim=-1)
-		t = torch.linspace(0., 1., seq_length).to(x)
+		t = torch.linspace(0., 2., 2 * seq_length).to(x)
+		t = t[:seq_length]
 		embedding = self.causal_encoder(t, x)
 		return embedding
 

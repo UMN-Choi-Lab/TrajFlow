@@ -45,10 +45,6 @@ class CDE(torch.nn.Module):
 		self.f = CDEFunc(input_dim + 1, embedding_dim, hidden_dim, num_layers)
 
 	def forward(self, t, x):
-		batch_size, seq_len, _ = x.shape
-		t_expanded = t.unsqueeze(0).unsqueeze(-1)
-		t_expanded = t_expanded.expand(batch_size, seq_len, 1)
-		x = torch.cat([x, t_expanded], dim=-1)
 		spline = NaturalCubicSpline(t, x)
 		vector_field = VectorField(dX_dt=spline.derivative, f=self.f)
 		z0 = self.embed(spline.evaluate(t[0]))

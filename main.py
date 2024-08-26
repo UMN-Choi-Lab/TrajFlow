@@ -17,9 +17,9 @@ verbose = False
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
-		'encoder': 'GRU',
-		'flow': 'DNF',
-		'masked_data_ratio': 0
+		'encoder': 'CDE',
+		'flow': 'CNF',
+		'masked_data_ratio': 0.7
 	})
 	torch.manual_seed(run.config.seed)
 
