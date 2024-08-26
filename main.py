@@ -8,9 +8,9 @@ from train import train
 from evaluate import evaluate
 from visualize import visualize
 
-should_train = True
+should_train = False
 should_serialize = False
-should_evaluate = True
+should_evaluate = False
 should_visualize = False
 verbose = False
 
@@ -42,7 +42,7 @@ with wandb.init() as run:
 	num_parameters = sum(p.numel() for p in traj_flow.parameters() if p.requires_grad)
 	wandb.log({'parameters': num_parameters})
 
-	start_time = time.time()
+	train_start_time = time.time()
 
 	total_loss = []
 	if should_train:
@@ -56,9 +56,21 @@ with wandb.init() as run:
 			verbose=verbose,
 			device=device)
 		
-	end_time = time.time()
-	runtime = end_time - start_time
-	wandb.log({'runtime': runtime})
+	train_end_time = time.time()
+	train_runtime = train_end_time - train_start_time
+	wandb.log({'train runtime': train_runtime})
+
+	traj_flow.eval()
+	inputs, features = next(iter(ind.observation_site1.test_loader))
+	input = inputs[:, :100, ...].to(device)
+	feature = features[:, :100, ...].to(device)
+	inference_start_time = time.time()
+	traj_flow.sample(input, feature, 100)
+	inference_end_time = time.time()
+	inference_runtime = inference_end_time - inference_start_time
+	if verbose:
+		print(inference_runtime)
+	wandb.log({'inference runtime': inference_runtime})
 		
 	for loss in total_loss:
 		wandb.log({'loss': loss})

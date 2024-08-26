@@ -20,12 +20,13 @@ class GRU(nn.Module):
 		mask = ~torch.isnan(x)
 		x = x[mask]
 		x = x.view(batch_size, int(x.shape[0] / (batch_size * num_features)), num_features)
-		t = t.unsqueeze(0).unsqueeze(-1)
-		t = t.expand(batch_size, seq_len, 1)
-		t = t[mask[:, :, 0]]
-		t = t.view(batch_size, int(t.shape[0] / batch_size), 1)
-		imputed = torch.cat([x, t], dim=-1)
-		return imputed
+		# t = t.unsqueeze(0).unsqueeze(-1)
+		# t = t.expand(batch_size, seq_len, 1)
+		# t = t[mask[:, :, 0]]
+		# t = t.view(batch_size, int(t.shape[0] / batch_size), 1)
+		# imputed = torch.cat([x, t], dim=-1)
+		# return imputed
+		return x
 	
 	def _forward_imputation(self, t, x): # TODO: this is bad
 		batch_size, seq_len, _ = x.shape
