@@ -5,7 +5,7 @@ metric:
   goal: minimize
 parameters:
   seed:     
-    values: [2500832701, 910419654, 3223420462, 2148850497, 505817961]
+    values: [2500832701, 910419654]
   encoder:
     values: [GRU, CDE]
   flow:
