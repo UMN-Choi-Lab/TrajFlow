@@ -3,7 +3,7 @@ from collections import defaultdict
 
 api = wandb.Api()
 
-sweep_id = "mitchkos21-university-of-minnesota/trajflow_dry_run/mh9bdi3a"
+sweep_id = "mitchkos21-university-of-minnesota/trajflow_dry_run/l8zgtj66"
 sweep = api.sweep(sweep_id)
 
 config_counts = defaultdict(int)
@@ -19,17 +19,18 @@ for run in sweep.runs:
     masked_data_ratio = config['masked_data_ratio']
     key = f'{encoder}-{flow}-{masked_data_ratio}'
 
-    summary = run.summary
-    crps_result = summary['crps']
-    rmse_result = summary['rmse']
-    runtime_result = summary['runtime']
-    parameters_result = summary['parameters']
+    if encoder != "CDE" or flow !="CNF":
+        summary = run.summary
+        crps_result = summary['crps']
+        rmse_result = summary['rmse']
+        runtime_result = summary['train runtime']
+        parameters_result = summary['parameters']
 
-    config_counts[key] += 1
-    crps_results[key] += crps_result
-    rmse_results[key] += rmse_result
-    runtime_results[key] += runtime_result
-    parameters_results[key] += parameters_result
+        config_counts[key] += 1
+        crps_results[key] += crps_result
+        rmse_results[key] += rmse_result
+        runtime_results[key] += runtime_result
+        parameters_results[key] += parameters_result
 
 for key in config_counts.keys():
     num_runs = config_counts[key]

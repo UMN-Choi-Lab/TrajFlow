@@ -17,9 +17,9 @@ verbose = False
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
-		'encoder': 'CDE',
-		'flow': 'CNF',
-		'masked_data_ratio': 0.7
+		'encoder': 'GRU',
+		'flow': 'DNF',
+		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
 
@@ -82,7 +82,7 @@ with wandb.init() as run:
 		traj_flow.load_state_dict(torch.load(model_name))
 
 	if should_evaluate:
-		rmse, crps = evaluate(
+		rmse, crps, nll = evaluate(
 			observation_site=ind.observation_site1,
 			model=traj_flow,
 			num_samples=100,
@@ -91,7 +91,8 @@ with wandb.init() as run:
 		if verbose:
 			print(f'rmse: {rmse}')
 			print(f'crps: {crps}')
-		wandb.log({'rmse': rmse, 'crps': crps})
+			print(f'nll: {nll}')
+		wandb.log({'rmse': rmse, 'crps': crps, 'nll': nll})
 
 	if should_visualize:
 		visualize(

@@ -26,6 +26,7 @@ def evaluate(observation_site, model, num_samples, device):
     model.eval()
 
     with torch.no_grad():
+        nll_sum = 0
         rmse_sum = 0
         crps_sum = 0
         count = 0
@@ -34,6 +35,13 @@ def evaluate(observation_site, model, num_samples, device):
             test_input = inputs[:, :100, ...].to(device)
             test_feature = feature[:, :100, ...].to(device)
             test_target = inputs[:, 100:, ...].to(device)
+
+            # NLL same as training loss
+            z_t0, delta_logpz = model(test_input, test_target, test_feature)
+            logpz_t0, logpz_t1 = model.log_prob(z_t0, delta_logpz)
+            nll_sum += -torch.mean(logpz_t1)
+
+            # sample based evaluation
             _, samples, _ = model.sample(test_input, test_feature, num_samples)
             rmse_sum += rmse(test_target, samples)
             crps_sum += crps(test_target, samples)
@@ -41,5 +49,6 @@ def evaluate(observation_site, model, num_samples, device):
 
         rmse_score = rmse_sum / count
         crps_score = crps_sum / count
+        nll_score = nll_sum / count
 
-    return rmse_score, crps_score
+    return rmse_score, crps_score, nll_score

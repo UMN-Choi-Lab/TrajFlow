@@ -1,7 +1,7 @@
 program: main.py
 method: grid
 metric:
-  name: crps
+  name: nll
   goal: minimize
 parameters:
   seed:     
