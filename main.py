@@ -31,6 +31,8 @@ with wandb.init() as run:
 		missing_rate=run.config.masked_data_ratio)
 
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
+	print(device)
+
 	traj_flow = TrajFlow(
 		seq_len=100, 
 		input_dim=2, 
@@ -85,7 +87,7 @@ with wandb.init() as run:
 		rmse, crps, nll = evaluate(
 			observation_site=ind.observation_site1,
 			model=traj_flow,
-			num_samples=100,
+			num_samples=1000,
 			device=device)
 		
 		if verbose:
