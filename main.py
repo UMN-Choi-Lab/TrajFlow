@@ -8,17 +8,18 @@ from train import train
 from evaluate import evaluate
 from visualize import visualize
 
-should_train = True
-should_serialize = False
-should_evaluate = True
-should_visualize = False
+should_train = False
+should_serialize = True
+should_evaluate = False
+should_visualize = True
 verbose = False
+simple_visualization = True
 
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
-		'encoder': 'GRU',
-		'flow': 'DNF',
+		'encoder': 'CDE',
+		'flow': 'CNF',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -78,7 +79,8 @@ with wandb.init() as run:
 		wandb.log({'loss': loss})
 			
 	if should_serialize:
-		model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
+		model_name = 'traj_flow_CDE_CNF_0_190596211.pt'
+		#model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
 		if should_train:
 			torch.save(traj_flow.state_dict(), model_name)
 		traj_flow.load_state_dict(torch.load(model_name))
@@ -104,4 +106,5 @@ with wandb.init() as run:
 			steps=1000,
 			prob_threshold=0.001,
 			output_dir='visualization',
+			simple=simple_visualization,
 			device=device)

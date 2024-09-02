@@ -3,7 +3,7 @@ from collections import defaultdict
 
 api = wandb.Api()
 
-sweep_id = 'pjz9kdbk'
+sweep_id = 'akjlyrid'
 sweep = api.sweep(f'mitchkos21-university-of-minnesota/trajflow_dry_run/{sweep_id}')
 
 config_counts = defaultdict(int)
@@ -21,7 +21,7 @@ for run in sweep.runs:
     masked_data_ratio = config['masked_data_ratio']
     key = f'{encoder}-{flow}-{masked_data_ratio}'
 
-    if encoder != "CDE" or flow !="CNF":
+    if encoder != "CDE" or flow != "CNF":
         summary = run.summary
         nll_result = summary['nll']
         crps_result = summary['crps']
