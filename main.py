@@ -12,7 +12,7 @@ should_train = False
 should_serialize = True
 should_evaluate = False
 should_visualize = True
-verbose = False
+verbose = True
 simple_visualization = True
 
 with wandb.init() as run:
@@ -103,7 +103,7 @@ with wandb.init() as run:
 			observation_site=ind.observation_site1,
 			model=traj_flow,
 			num_samples=10,
-			steps=1000,
+			steps=10,#1000,
 			prob_threshold=0.001,
 			output_dir='visualization',
 			simple=simple_visualization,

@@ -2,7 +2,10 @@ import os
 import subprocess
 import torch
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+
+matplotlib.use('Agg')
 
 def makedir(directory):
     try:
@@ -43,7 +46,7 @@ def generate_video(background_image, grid, pz_t1, prob_threshold,
     x = grid[:, 0].reshape(steps, steps)
     y = -grid[:, 1].reshape(steps, steps)
     
-    background = plt.imread('data\paper_background.png') if simple else plt.imread(background_image)
+    background = plt.imread('data\\paper_background.png') if simple else plt.imread(background_image)
 
     min_x = 0
     max_x = background.shape[1] * ortho_px_to_meter

@@ -21,8 +21,8 @@ for run in sweep.runs:
     masked_data_ratio = config['masked_data_ratio']
     key = f'{encoder}-{flow}-{masked_data_ratio}'
 
-    if encoder != "CDE" or flow != "CNF":
-        summary = run.summary
+    summary = run.summary
+    if 'nll' in summary:
         nll_result = summary['nll']
         crps_result = summary['crps']
         rmse_result = summary['rmse']
@@ -40,12 +40,12 @@ for run in sweep.runs:
 
 for key in config_counts.keys():
     num_runs = config_counts[key]
-    nll = nll_results[key] / num_runs
-    crps = crps_results[key] / num_runs
-    rmse = rmse_results[key] / num_runs
-    train_runtime = train_runtime_results[key] / num_runs
-    inference_runtime = inference_runtime_results[key] / num_runs
-    parameters = parameters_results[key] / num_runs
+    nll = nll_results[key] = nll_results[key] / num_runs
+    crps = crps_results[key] = crps_results[key] / num_runs
+    rmse = rmse_results[key] =  rmse_results[key] / num_runs
+    train_runtime = train_runtime_results[key] = train_runtime_results[key] / num_runs
+    inference_runtime = inference_runtime_results[key] = inference_runtime_results[key] / num_runs
+    parameters = parameters_results[key] = parameters_results[key] / num_runs
 
     print(key)
     print(f'nll: {nll}')
@@ -55,3 +55,17 @@ for key in config_counts.keys():
     print(f'inference runtime: {inference_runtime}')
     print(f'parameters: {parameters}')
     print('')
+
+
+for encoder in ['GRU', 'CDE']:
+    for flow in ['DNF', 'CNF']:
+        key = f'{encoder}-{flow}'
+        print(key)
+        train_runtime = 0
+        inference_runtime = 0
+        for masked_data_ratio in [0, 0.3, 0.5, 0.7]:
+            extended_key = f'{key}-{masked_data_ratio}'
+            train_runtime += train_runtime_results[extended_key]
+            inference_runtime += inference_runtime_results[extended_key]
+        print(f'train runtime: {train_runtime / 4}')
+        print(f'inference runtime: {inference_runtime / 4}')
