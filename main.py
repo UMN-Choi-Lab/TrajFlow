@@ -2,7 +2,7 @@ import random
 import time
 import wandb
 import torch
-from InD import InD
+from datasets.InD import InD
 from model.TrajFlow import TrajFlow,  CausalEnocder, Flow
 from train import train
 from evaluate import evaluate

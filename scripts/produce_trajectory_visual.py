@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from InD import InD
+from datasets.InD import InD
 
 def crop_image(image_path, crop_box, output_path):
     with Image.open(image_path) as img:
