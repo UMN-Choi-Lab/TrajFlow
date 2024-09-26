@@ -22,7 +22,7 @@ def crps(y_true, y_pred):
     crps = torch.mean(crps)
     return crps
 
-def evaluate(observation_site, model, num_samples, device):
+def evaluate(data_loader, model, num_samples, device):
     model.eval()
 
     with torch.no_grad():
@@ -31,10 +31,10 @@ def evaluate(observation_site, model, num_samples, device):
         crps_sum = 0
         count = 0
 
-        for inputs, feature in observation_site.test_loader:
-            test_input = inputs[:, :100, ...].to(device)
-            test_feature = feature[:, :100, ...].to(device)
-            test_target = inputs[:, 100:, ...].to(device)
+        for test_input, test_feature, test_target in data_loader:
+            test_input = test_input.to(device)
+            test_feature = test_feature.to(device)
+            test_target = test_target.to(device)
 
             # NLL same as training loss
             z_t0, delta_logpz = model(test_input, test_target, test_feature)

@@ -8,18 +8,18 @@ from train import train
 from evaluate import evaluate
 from visualize import visualize
 
-should_train = False
-should_serialize = True
-should_evaluate = False
-should_visualize = True
+should_train = True
+should_serialize = False
+should_evaluate = True
+should_visualize = False
 verbose = True
 simple_visualization = True
 
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
-		'encoder': 'CDE',
-		'flow': 'CNF',
+		'encoder': 'GRU',
+		'flow': 'DNF',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -30,6 +30,8 @@ with wandb.init() as run:
 		train_batch_size=64, 
 		test_batch_size=1,
 		missing_rate=run.config.masked_data_ratio)
+	train_loader = ind.observation_site1.train_loader
+	test_loader = ind.observation_site1.test_loader
 
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 	print(device)
@@ -37,7 +39,7 @@ with wandb.init() as run:
 	traj_flow = TrajFlow(
 		seq_len=100, 
 		input_dim=2, 
-		feature_dim=5, 
+		feature_dim=5,#29, 
 		embedding_dim=128,
 		hidden_dim=512,
 		causal_encoder=CausalEnocder[run.config.encoder],
@@ -50,7 +52,7 @@ with wandb.init() as run:
 	total_loss = []
 	if should_train:
 		total_loss = train(
-			observation_site=ind.observation_site1,
+			data_loader=train_loader,
 			model=traj_flow,
 			epochs=25,#100,
 			lr=1e-3,
@@ -64,9 +66,9 @@ with wandb.init() as run:
 	wandb.log({'train runtime': train_runtime})
 
 	traj_flow.eval()
-	inputs, features = next(iter(ind.observation_site1.test_loader))
-	input = inputs[:, :100, ...].to(device)
-	feature = features[:, :100, ...].to(device)
+	input, feature, _ = next(iter(test_loader))
+	input = input.to(device)
+	feature = feature.to(device)
 	inference_start_time = time.time()
 	traj_flow.sample(input, feature, 100)
 	inference_end_time = time.time()
@@ -87,7 +89,7 @@ with wandb.init() as run:
 
 	if should_evaluate:
 		rmse, crps, nll = evaluate(
-			observation_site=ind.observation_site1,
+			data_loader=test_loader,
 			model=traj_flow,
 			num_samples=1000,
 			device=device)

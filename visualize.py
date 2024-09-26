@@ -121,10 +121,10 @@ def visualize(observation_site, model, num_samples, steps, prob_threshold, outpu
     grid = torch.stack((x.flatten(), y.flatten()), dim=-1).to(device)
 
     for i in range(num_samples):
-        inputs, features = next(iter(observation_site.test_loader))
-        input = inputs[:, :100, ...].to(device)
-        target = inputs[:, 100:, ...].to(device)
-        features = features[:, :100, ...].to(device)
+        input, feature, target = next(iter(observation_site.test_loader))
+        input = input.to(device)
+        target = target.to(device)
+        features = feature.to(device)
     
         pz_t1 = compute_pzt1(model, input, features, grid)
 

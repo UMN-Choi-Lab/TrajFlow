@@ -56,9 +56,7 @@ min_y = background.shape[0] * ortho_px_to_meter
 max_y = 0
 
 data = list(ind.observation_site1.test_loader)
-inputs, features = data[0]
-input = inputs[:, :100, ...]
-target = inputs[:, 100:, ...]
+input, feature, target = data[0]
 
 observed_traj = ind.observation_site1.denormalize(input[0].numpy())
 observed_traj = np.stack([observed_traj[:, 0], -observed_traj[:, 1]], axis=-1)

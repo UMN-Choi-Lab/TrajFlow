@@ -19,7 +19,10 @@ class InDDataset(Dataset):
 		self.data_size = input.size(0)
 
 	def __getitem__(self, index):
-		return self.input[index], self.feature[index]
+		input = self.input[index][:100, ...]
+		feature = self.feature[index][:100, ...]
+		target = self.input[index][100:, ...]
+		return input, feature, target
 
 	def __len__(self):
 		return self.data_size
