@@ -20,7 +20,7 @@ class Flow(Enum):
 	DNF = 1
 	CNF = 2
 	
-def construct_causal_enocder(input_dim, embedding_dim, hidden_dim, num_layers, causal_encoder):
+def construct_causal_enocder(input_dim, embedding_dim, num_layers, causal_encoder):
 	if causal_encoder == CausalEnocder.GRU:
 		return GRU(input_dim=input_dim, hidden_dim=embedding_dim, num_layers=num_layers)
 	elif causal_encoder == CausalEnocder.LSTM:
@@ -35,7 +35,7 @@ def construct_causal_enocder(input_dim, embedding_dim, hidden_dim, num_layers, c
 
 def construct_flow(input_dim, condition_dim, hidden_dim, flow):
 	if flow == Flow.DNF:
-		return DNF(n_blocks=3, input_size=input_dim, hidden_size=hidden_dim, n_hidden=10, num_pred=100, cond_label_size=condition_dim)
+		return DNF(n_blocks=3, input_size=input_dim, hidden_size=hidden_dim, n_hidden=10, cond_label_size=condition_dim)
 	elif flow == Flow.CNF:
 		return CNF(input_dim, condition_dim, (hidden_dim for _ in range(4)))
 	else:
@@ -45,7 +45,7 @@ def construct_flow(input_dim, condition_dim, hidden_dim, flow):
 class TrajFlow(nn.Module):
 	def __init__(self, seq_len, input_dim, feature_dim, embedding_dim, hidden_dim, causal_encoder, flow):
 		super(TrajFlow, self).__init__()
-		self.causal_encoder = construct_causal_enocder(input_dim + feature_dim, embedding_dim, hidden_dim, 4, causal_encoder)
+		self.causal_encoder = construct_causal_enocder(input_dim + feature_dim, embedding_dim, 4, causal_encoder)
 		self.flow = construct_flow(input_dim, embedding_dim, hidden_dim, flow)
 
 		self.register_buffer("base_dist_mean", torch.zeros(seq_len, input_dim))

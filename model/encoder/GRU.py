@@ -9,17 +9,18 @@ class GRU(nn.Module):
 		#self.gru = nn.GRU(input_dim, hidden_dim, num_layers, batch_first=True)
 
 	def forward(self, t, x):
-		imputed = self._baseline(t, x)
+		#imputed = self._baseline(t, x)
 		#imputed = self._forward_imputation(t, x)
 		#imputed = x	
-		embedding, _ = self.gru(imputed)
+		#embedding, _ = self.gru(imputed)
+		embedding, _ = self.gru(x)
 		return embedding[:, -1, :]
 	
 	def _baseline(Self, t, x):
 		batch_size, seq_len, num_features = x.shape
 		mask = ~torch.isnan(x)
 		x = x[mask]
-		x = x.view(batch_size, int(x.shape[0] / (batch_size * num_features)), num_features)
+		x = x.view(batch_size, int(x.shape[0] / (batch_size * num_features)), num_features) # need to remeber what was going on here
 		# t = t.unsqueeze(0).unsqueeze(-1)
 		# t = t.expand(batch_size, seq_len, 1)
 		# t = t[mask[:, :, 0]]

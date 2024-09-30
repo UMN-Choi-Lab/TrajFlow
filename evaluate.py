@@ -22,16 +22,27 @@ def crps(y_true, y_pred):
     crps = torch.mean(crps)
     return crps
 
-def evaluate(data_loader, model, num_samples, device):
+def min_ade(y_true, y_pred):
+    errors = torch.norm(y_pred - y_true, dim=-1)
+    ade = errors.mean(dim=1)
+    return ade.min()
+
+def min_fde(y_true, y_pred):
+    fde = torch.norm(y_pred[:,-1,:] - y_true[:,-1,:], dim=-1)
+    return fde.min()
+
+def evaluate(observation_site, model, num_samples, device):
     model.eval()
 
     with torch.no_grad():
         nll_sum = 0
         rmse_sum = 0
         crps_sum = 0
+        min_ade_sum = 0
+        min_fde_sum = 0
         count = 0
 
-        for test_input, test_feature, test_target in data_loader:
+        for test_input, test_feature, test_target in observation_site.test_loader:
             test_input = test_input.to(device)
             test_feature = test_feature.to(device)
             test_target = test_target.to(device)
@@ -42,13 +53,22 @@ def evaluate(data_loader, model, num_samples, device):
             nll_sum += -torch.mean(logpz_t1)
 
             # sample based evaluation
-            _, samples, _ = model.sample(test_input, test_feature, num_samples)
+            z_t0, samples, delta_logpz = model.sample(test_input, test_feature, num_samples)
+            logpz_t0, logpz_t1 = model.log_prob(z_t0, delta_logpz)
+
+            samples = torch.from_numpy(observation_site.denormalize(samples.cpu().numpy(), test=True)).to(device)
+            test_target = torch.from_numpy(observation_site.denormalize(test_target.cpu().numpy(), test=True)).to(device)
+
             rmse_sum += rmse(test_target, samples)
             crps_sum += crps(test_target, samples)
+            min_ade_sum += min_ade(test_target, samples)
+            min_fde_sum += min_fde(test_target, samples)
             count += 1
 
         rmse_score = rmse_sum / count
         crps_score = crps_sum / count
+        min_ade_score = min_ade_sum / count
+        min_fde_score = min_fde_sum / count
         nll_score = nll_sum / count
 
-    return rmse_score, crps_score, nll_score
+    return rmse_score, crps_score, min_ade_score, min_fde_score, nll_score

@@ -3,7 +3,7 @@ import os
 import torch
 import matplotlib.pyplot as plt
 
-def train(data_loader, model, epochs, lr, weight_decay, gamma, verbose, device):
+def train(observation_site, model, epochs, lr, weight_decay, gamma, verbose, device):
     model.train()
 
     optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -12,10 +12,10 @@ def train(data_loader, model, epochs, lr, weight_decay, gamma, verbose, device):
     total_loss = []
     for epoch in range(epochs):
         losses = []
-        for input, feature, target in data_loader:
+        for input, feature, target in observation_site.train_loader:
             input = input.to(device)
-            target = target.to(device)
             features = feature.to(device)
+            target = target.to(device)
 
             z_t0, delta_logpz = model(input, target, features)
             logpz_t0, logpz_t1 = model.log_prob(z_t0, delta_logpz)

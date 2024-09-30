@@ -36,10 +36,10 @@ class InDObservationSite():
 		self.train_loader = train_loader
 		self.test_loader = test_loader
 
-	def normalize(self, data):
+	def normalize(self, data, test=True):
 		return normalize(data, self.boundaries)
 	
-	def denormalize(self, data):
+	def denormalize(self, data, test=True):
 		return denormalize(data, self.boundaries)
 	
 

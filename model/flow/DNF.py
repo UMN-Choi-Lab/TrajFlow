@@ -114,7 +114,7 @@ class AffineCouplingLayer(nn.Module):
 
 
 class DNF(nn.Module):
-    def __init__(self, n_blocks, input_size, hidden_size, n_hidden, num_pred, cond_label_size=None, batch_norm=True):
+    def __init__(self, n_blocks, input_size, hidden_size, n_hidden, cond_label_size=None, batch_norm=True):
         super().__init__()
         modules = []
         mask = torch.arange(input_size).float() % 2
