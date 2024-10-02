@@ -58,7 +58,7 @@ with wandb.init() as run:
 	elif dataset == Dataset.EthUcy:
 		seq_len = 12
 		input_dim = 2
-		feature_dim = 4 #29
+		feature_dim = 4
 		embedding_dim = 16
 		hidden_dim = 32
 
@@ -135,7 +135,7 @@ with wandb.init() as run:
 			print(f'min ade: {min_ade}')
 			print(f'min fde: {min_fde}')
 			print(f'nll: {nll}')
-		wandb.log({'rmse': rmse, 'crps': crps, 'min ade': min_ade, 'final rmse': min_fde, 'nll': nll})
+		wandb.log({'rmse': rmse, 'crps': crps, 'min ade': min_ade, 'min fde': min_fde, 'nll': nll})
 
 	if should_visualize:
 		# visualize(

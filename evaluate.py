@@ -24,7 +24,7 @@ def crps(y_true, y_pred):
 
 def min_ade(y_true, y_pred):
     errors = torch.norm(y_pred - y_true, dim=-1)
-    ade = errors.mean(dim=1)
+    ade = errors.mean(dim=-1)
     return ade.min()
 
 def min_fde(y_true, y_pred):
@@ -53,12 +53,9 @@ def evaluate(observation_site, model, num_samples, device):
             nll_sum += -torch.mean(logpz_t1)
 
             # sample based evaluation
-            z_t0, samples, delta_logpz = model.sample(test_input, test_feature, num_samples)
-            logpz_t0, logpz_t1 = model.log_prob(z_t0, delta_logpz)
-
-            samples = torch.from_numpy(observation_site.denormalize(samples.cpu().numpy(), test=True)).to(device)
-            test_target = torch.from_numpy(observation_site.denormalize(test_target.cpu().numpy(), test=True)).to(device)
-
+            _, samples, _ = model.sample(test_input, test_feature, num_samples)
+            test_target = torch.tensor(observation_site.denormalize(test_target.cpu().numpy())).to(device)
+            samples = torch.tensor(observation_site.denormalize(samples.cpu().numpy())).to(device)
             rmse_sum += rmse(test_target, samples)
             crps_sum += crps(test_target, samples)
             min_ade_sum += min_ade(test_target, samples)

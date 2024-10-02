@@ -168,12 +168,6 @@ import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
 
-# remove me
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', None)
-pd.set_option('display.max_colwidth', None)
-
 # InD uses this to.... put in shared location
 def normalize(data, boundaries):
 	return (data - boundaries[:, 0]) / (boundaries[:, 1] - boundaries[:, 0])
@@ -263,39 +257,36 @@ class EthUcyDataset(Dataset):
 		targets = future[input_columns].values
 		
 		# Pad with zeros if necessary... probably can remove
-		if inputs.shape[0] < self.history_frames:
-			pad_width = ((self.history_frames - inputs.shape[0], 0), (0, 0))
-			inputs = np.pad(inputs, pad_width, mode='constant')
+		# if inputs.shape[0] < self.history_frames:
+		# 	pad_width = ((self.history_frames - inputs.shape[0], 0), (0, 0))
+		# 	inputs = np.pad(inputs, pad_width, mode='constant')
 
-		if features.shape[0] < self.history_frames:
-			pad_width = ((self.history_frames - features.shape[0], 0), (0, 0))
-			features = np.pad(features, pad_width, mode='constant')
+		# if features.shape[0] < self.history_frames:
+		# 	pad_width = ((self.history_frames - features.shape[0], 0), (0, 0))
+		# 	features = np.pad(features, pad_width, mode='constant')
 		
-		if targets.shape[0] < self.future_frames:
-			pad_width = ((0, self.future_frames - targets.shape[0]), (0, 0))
-			targets = np.pad(targets, pad_width, mode='constant')
+		# if targets.shape[0] < self.future_frames:
+		# 	pad_width = ((0, self.future_frames - targets.shape[0]), (0, 0))
+		# 	targets = np.pad(targets, pad_width, mode='constant')
 
 		inputs = torch.tensor(inputs, dtype=torch.float32)
 		features = torch.tensor(features, dtype=torch.float32)
 		features = self._append_time(features)
 		targets = torch.tensor(targets, dtype=torch.float32)
-		
+
 		return inputs, features, targets
 	
 class EthUcyObservationSite():
-	def __init__(self, train_loader, test_loader, train_boundaries, test_boundaries):
+	def __init__(self, train_loader, test_loader, boundaries):
 		self.train_loader = train_loader
 		self.test_loader = test_loader
-		self.train_boundaries = train_boundaries
-		self.test_boundaries = test_boundaries
+		self.boundaries = boundaries
 
-	def normalize(self, data, test=True):
-		boundaries = self.test_boundaries if test else self.train_boundaries
-		return normalize(data, boundaries)
+	def normalize(self, data):
+		return normalize(data, self.boundaries)
 	
-	def denormalize(self, data, test=True):
-		boundaries = self.test_boundaries if test else self.train_boundaries
-		return denormalize(data, boundaries)
+	def denormalize(self, data):
+		return denormalize(data, self.boundaries)
 
 class EthUcy():
 	def __init__(self, train_batch_size, test_batch_size):
@@ -325,19 +316,30 @@ class EthUcy():
 	
 	def _get_observation_site(self, data_source):
 		if data_source not in self.observation_sites:
-			train_boundaries, train_loader = self._load_data_source(data_source, 'train', self.train_batch_size)
+			spatial_boundaries = np.array([[np.inf, -np.inf], [np.inf, -np.inf]])
+			feature_boundaries = np.array([[np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf]])
+			train_scenes = self._load_data_source(data_source, 'train', spatial_boundaries, feature_boundaries)
 			#train_boundaries, train_loader = self._load_data_source(data_source, 'test', self.train_batch_size)
-			test_boundaries, test_loader = self._load_data_source(data_source, 'test', self.test_batch_size)
+			test_scenes = self._load_data_source(data_source, 'test', spatial_boundaries, feature_boundaries)
 			#test_boundaries, test_loader = self._load_data_source(data_source, 'train', self.test_batch_size)
-			self.observation_sites[data_source] = EthUcyObservationSite(train_loader, test_loader, train_boundaries, test_boundaries)
+			train_loader = self._prepare_data(train_scenes, spatial_boundaries, feature_boundaries, self.train_batch_size)
+			test_loader = self._prepare_data(test_scenes, spatial_boundaries, feature_boundaries, self.test_batch_size)
+			self.observation_sites[data_source] = EthUcyObservationSite(train_loader, test_loader, spatial_boundaries)
 		return self.observation_sites[data_source]
+	
+	def _prepare_data(self, scenes, spatial_boundaries, feature_boundaries, batch_size):
+		combined_boundaries = np.concatenate((spatial_boundaries, feature_boundaries), axis=0)
+		for scene in scenes:
+			for agent in scene.agents:
+				agent.data = normalize(agent.data, combined_boundaries)
 
-	def _load_data_source(self, data_source, data_class, batch_size):
+		dataset = EthUcyDataset(scenes)
+		return DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+	def _load_data_source(self, data_source, data_class, spatial_boundaries, feature_boundaries):
 		N = 5 # neighboorhood size
 		scenes = []
 		first = True # remove me
-		spatial_boundaries = np.array([[np.inf, -np.inf], [np.inf, -np.inf]])
-		feature_boundaries = np.array([[np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf]])
 		# for i in range(N * N):
 		# 	feature_boundaries = np.append(feature_boundaries, [[np.inf, -np.inf]], axis=0)
 		
@@ -459,17 +461,12 @@ class EthUcy():
 					
 					scenes.append(scene)
 
-		combined_boundaries = np.concatenate((spatial_boundaries, feature_boundaries), axis=0)
-		for scene in scenes:
-			for agent in scene.agents:
-				agent.data = normalize(agent.data, combined_boundaries)
-
-		dataset = EthUcyDataset(scenes)
-		return spatial_boundaries, DataLoader(dataset, batch_size=batch_size, shuffle=True)
+		return scenes
 
 
 # dataset = EthUcy(1, 1)
 # test = dataset.eth_observation_site.test_loader
+# sample = next(iter(test))
 
 # # dataset = EthUcy()
 # # first = True
@@ -494,3 +491,153 @@ class EthUcy():
 # 	print(f"Target shape (batch_target): {batch_target.shape}")
 
 # print("Data loading test completed.")
+
+# import os
+# import pickle
+# import torch
+# from torch.utils.data import Dataset, DataLoader
+
+# class EthUcyDataset(Dataset):
+# 	def __init__(self, filepath):
+# 		self.inputs, self.features, self.targets = self._prepare_data(filepath)
+
+# 	def _prepare_data(self, filepath):
+# 		with open(filepath, 'rb') as file:
+# 			restored_batches = pickle.load(file)
+	
+# 		x_t_stack = []
+# 		y_t_stack = []
+# 		x_st_t_stack = []
+# 		y_st_t_stack = []
+
+# 		for batch in restored_batches:
+# 			x_t = batch['x_t']
+# 			y_t = batch['y_t']
+# 			x_st_t = batch['x_st_t']
+# 			y_st_t = batch['y_st_t']
+
+# 			x_t_stack.append(x_t)
+# 			y_t_stack.append(y_t)
+# 			x_st_t_stack.append(x_st_t)
+# 			y_st_t_stack.append(y_st_t)
+
+# 		x = torch.cat(x_t_stack, dim=0)
+# 		y = torch.cat(y_t_stack, dim=0)
+# 		x_st = torch.cat(x_st_t_stack, dim=0)
+# 		y_st = torch.cat(y_st_t_stack, dim=0)
+
+# 		# remove me just for the sake of GRU
+# 		x_st = torch.nan_to_num(x_st, nan=0.0)
+
+# 		inputs = x_st[:, :, :2] 
+# 		features = x_st[:, :, 2:]
+# 		features = self._append_time(features)
+# 		targets = y_st
+
+# 		return inputs, features, targets
+	
+# 	def _append_time(self, features):
+# 		batch_size, seq_len, _ = features.shape
+# 		t = torch.linspace(0., 1., seq_len)
+# 		t = t.unsqueeze(0).unsqueeze(-1)
+# 		t = t.expand(batch_size, seq_len, 1)
+# 		return torch.cat([features, t], dim=-1)
+
+# 	def __len__(self):
+# 		return self.inputs.shape[0]
+
+# 	def __getitem__(self, idx):
+# 		return self.inputs[idx], self.features[idx], self.targets[idx]
+	
+# class EthUcyObservationSite():
+# 	def __init__(self, train_loader, test_loader):
+# 		self.train_loader = train_loader
+# 		self.test_loader = test_loader
+	
+# class EthUcy():
+# 	def __init__(self, train_batch_size, test_batch_size):
+# 		self.train_batch_size = train_batch_size
+# 		self.test_batch_size = test_batch_size
+# 		self.observation_sites = {}
+
+# 	@property
+# 	def eth_observation_site(self):
+# 		return self._get_observation_site('eth')
+	
+# 	@property
+# 	def hotel_observation_site(self):
+# 		return self._get_observation_site('hotel')
+	
+# 	@property
+# 	def univ_observation_site(self):
+# 		return self._get_observation_site('univ')
+	
+# 	@property
+# 	def zara1_observation_site(self):
+# 		return self._get_observation_site('zara1')
+	
+# 	@property
+# 	def zara2_observation_site(self):
+# 		return self._get_observation_site('zara2')
+	
+# 	def _get_observation_site(self, data_source):
+# 		if data_source not in self.observation_sites:
+# 			train_loader = self._load_data_source(data_source, 'train', self.train_batch_size)
+# 			test_loader = self._load_data_source(data_source, 'test', self.test_batch_size)
+# 			self.observation_sites[data_source] = EthUcyObservationSite(train_loader, test_loader)
+# 		return self.observation_sites[data_source]
+
+# 	def _load_data_source(self, data_source, data_class, batch_size):
+# 		filepath = os.path.join('data', f'{data_source}_{data_class}.pkl')
+# 		dataset = EthUcyDataset(filepath)
+# 		return DataLoader(dataset, batch_size=batch_size, shuffle=True)
+	
+
+# ethucy = EthUcy(train_batch_size=128, test_batch_size=1)
+# train = ethucy.eth_observation_site.train_loader
+# inputs, features, targets = next(iter(train))
+# print(inputs.shape)
+# print(features.shape)
+# print(targets.shape)
+
+# print(inputs[0])
+# print(features[0])
+# print(targets[0])
+
+# filename = 'eth_test.pkl'
+
+# with open(filename, 'rb') as file:
+# 	restored_batches = pickle.load(file)
+	
+# x_t_stack = []
+# y_t_stack = []
+# x_st_t_stack = []
+# y_st_t_stack = []
+
+# for batch in restored_batches:
+# 	x_t = batch['x_t']
+# 	y_t = batch['y_t']
+# 	x_st_t = batch['x_st_t']
+# 	y_st_t = batch['y_st_t']
+
+# 	x_t_stack.append(x_t)
+# 	y_t_stack.append(y_t)
+# 	x_st_t_stack.append(x_st_t)
+# 	y_st_t_stack.append(y_st_t)
+
+# x = torch.cat(x_t_stack, dim=0)
+# y = torch.cat(y_t_stack, dim=0)
+# x_st = torch.cat(x_st_t_stack, dim=0)
+# y_st = torch.cat(y_st_t_stack, dim=0)
+
+# print("All Samples Tensors Shapes:")
+# print(x.shape)
+# print(y.shape)
+# print(x_st.shape)
+# print(y_st.shape)
+
+# #we can zero pad I guess..., do this for GRU
+# #x = torch.nan_to_num(x, nan=0.0)
+
+# print(torch.any(torch.isnan(x)))
+# print(torch.any(torch.isnan(y)))
