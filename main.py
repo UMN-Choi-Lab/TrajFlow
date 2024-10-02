@@ -126,7 +126,7 @@ with wandb.init() as run:
 		rmse, crps, min_ade, min_fde, nll = evaluate(
 			observation_site=observation_site,
 			model=traj_flow,
-			num_samples=20,#1000,
+			num_samples=1000,#20,
 			device=device)
 		
 		if verbose:
