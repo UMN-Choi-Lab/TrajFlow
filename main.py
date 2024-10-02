@@ -15,7 +15,7 @@ should_train = True
 should_serialize = False
 should_evaluate = True
 should_visualize = True
-verbose = True
+verbose = False
 simple_visualization = False
 
 with wandb.init() as run:
