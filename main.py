@@ -14,8 +14,8 @@ from visualize_temp import visualize_temp
 should_train = True
 should_serialize = False
 should_evaluate = True
-should_visualize = True
-verbose = True
+should_visualize = False
+verbose = False
 simple_visualization = False
 
 with wandb.init() as run:
@@ -59,8 +59,8 @@ with wandb.init() as run:
 		seq_len = 12
 		input_dim = 2
 		feature_dim = 4
-		embedding_dim = 16
-		hidden_dim = 32
+		embedding_dim = 128#16
+		hidden_dim = 512#32
 
 		ethucy = EthUcy(train_batch_size=128, test_batch_size=1)
 		observation_site = ethucy.eth_observation_site
@@ -126,7 +126,7 @@ with wandb.init() as run:
 		rmse, crps, min_ade, min_fde, nll = evaluate(
 			observation_site=observation_site,
 			model=traj_flow,
-			num_samples=20,#1000,
+			num_samples=1000, #20,
 			device=device)
 		
 		if verbose:
@@ -137,22 +137,22 @@ with wandb.init() as run:
 			print(f'nll: {nll}')
 		wandb.log({'rmse': rmse, 'crps': crps, 'min ade': min_ade, 'min fde': min_fde, 'nll': nll})
 
-	if should_visualize:
-		# visualize(
-		# 	observation_site=ind.observation_site1,
-		# 	model=traj_flow,
-		# 	num_samples=10,
-		# 	steps=100,#1000,
-		# 	prob_threshold=0.001,
-		# 	output_dir='visualization',
-		# 	simple=simple_visualization,
-		# 	device=device)
-		visualize_temp(
-			data_loader=observation_site.test_loader,
-			model=traj_flow,
-			num_samples=10,
-			steps=100,#1000,
-			prob_threshold=0.001,
-			output_dir='visualization_temp',
-			simple=simple_visualization,
-			device=device)
+	# if should_visualize:
+	# 	# visualize(
+	# 	# 	observation_site=ind.observation_site1,
+	# 	# 	model=traj_flow,
+	# 	# 	num_samples=10,
+	# 	# 	steps=100,#1000,
+	# 	# 	prob_threshold=0.001,
+	# 	# 	output_dir='visualization',
+	# 	# 	simple=simple_visualization,
+	# 	# 	device=device)
+	# 	visualize_temp(
+	# 		data_loader=observation_site.test_loader,
+	# 		model=traj_flow,
+	# 		num_samples=10,
+	# 		steps=100,#1000,
+	# 		prob_threshold=0.001,
+	# 		output_dir='visualization_temp',
+	# 		simple=simple_visualization,
+	# 		device=device)
