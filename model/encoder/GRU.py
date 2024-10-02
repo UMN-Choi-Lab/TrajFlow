@@ -9,11 +9,11 @@ class GRU(nn.Module):
 		#self.gru = nn.GRU(input_dim, hidden_dim, num_layers, batch_first=True)
 
 	def forward(self, t, x):
-		#imputed = self._baseline(t, x)
+		imputed = self._baseline(t, x)
 		#imputed = self._forward_imputation(t, x)
 		#imputed = x	
-		#embedding, _ = self.gru(imputed)
-		embedding, _ = self.gru(x)
+		embedding, _ = self.gru(imputed)
+		#embedding, _ = self.gru(x)
 		return embedding[:, -1, :]
 	
 	def _baseline(Self, t, x):

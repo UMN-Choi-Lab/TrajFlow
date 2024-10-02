@@ -14,8 +14,8 @@ from visualize_temp import visualize_temp
 should_train = True
 should_serialize = False
 should_evaluate = True
-should_visualize = False
-verbose = False
+should_visualize = True
+verbose = True
 simple_visualization = False
 
 with wandb.init() as run:
@@ -23,8 +23,8 @@ with wandb.init() as run:
 		'seed': random.randint(0, 2**32 - 1),
 		'encoder': 'GRU',
 		'flow': 'DNF',
-		'dataset': 'EthUcy',
-		'masked_data_ratio': 0
+		'dataset': 'InD',
+		'masked_data_ratio': 0.7
 	})
 	torch.manual_seed(run.config.seed)
 
@@ -126,7 +126,7 @@ with wandb.init() as run:
 		rmse, crps, min_ade, min_fde, nll = evaluate(
 			observation_site=observation_site,
 			model=traj_flow,
-			num_samples=1000, #20,
+			num_samples=20,#1000,
 			device=device)
 		
 		if verbose:
@@ -137,22 +137,22 @@ with wandb.init() as run:
 			print(f'nll: {nll}')
 		wandb.log({'rmse': rmse, 'crps': crps, 'min ade': min_ade, 'min fde': min_fde, 'nll': nll})
 
-	# if should_visualize:
-	# 	# visualize(
-	# 	# 	observation_site=ind.observation_site1,
-	# 	# 	model=traj_flow,
-	# 	# 	num_samples=10,
-	# 	# 	steps=100,#1000,
-	# 	# 	prob_threshold=0.001,
-	# 	# 	output_dir='visualization',
-	# 	# 	simple=simple_visualization,
-	# 	# 	device=device)
-	# 	visualize_temp(
-	# 		data_loader=observation_site.test_loader,
-	# 		model=traj_flow,
-	# 		num_samples=10,
-	# 		steps=100,#1000,
-	# 		prob_threshold=0.001,
-	# 		output_dir='visualization_temp',
-	# 		simple=simple_visualization,
-	# 		device=device)
+	if should_visualize:
+		# visualize(
+		# 	observation_site=ind.observation_site1,
+		# 	model=traj_flow,
+		# 	num_samples=10,
+		# 	steps=100,#1000,
+		# 	prob_threshold=0.001,
+		# 	output_dir='visualization',
+		# 	simple=simple_visualization,
+		# 	device=device)
+		visualize_temp(
+			data_loader=observation_site.test_loader,
+			model=traj_flow,
+			num_samples=10,
+			steps=100,#1000,
+			prob_threshold=0.001,
+			output_dir='visualization_temp',
+			simple=simple_visualization,
+			device=device)
