@@ -4,7 +4,8 @@ metric:
   name: nll
   goal: minimize
 parameters:
-  dataset: InD
+  dataset: 
+    values: [InD]
   seed:     
     values: [3878625853, 3554420095, 2896009049, 4146594022, 3708304029]
   encoder:
