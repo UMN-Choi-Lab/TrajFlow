@@ -24,15 +24,9 @@ def crps(y_true, y_pred):
     return crps
 
 def min_ade(y_true, y_pred):
-    num_samples, seq_len, _ = y_pred.shape
-    ade = [1000 for _ in range(seq_len)]
-    for i in range(num_samples):
-        for j in range(seq_len):
-            x_squared = (y_pred[i][j][0] - y_true[0][j][0]) ** 2
-            y_squared = (y_pred[i][j][1] - y_true[0][j][1]) ** 2
-            l2_distance = math.sqrt(x_squared + y_squared)
-            ade[j] = min(ade[j], l2_distance)
-    return sum(ade) / y_pred.shape[1]
+    distances = torch.norm(y_pred - y_true.expand_as(y_pred), dim=-1)
+    min_distances = torch.min(distances, dim=0).values
+    return torch.mean(min_distances)
 
 def min_fde(y_true, y_pred):
     fde = torch.norm(y_pred[:,-1,:] - y_true[:,-1,:], dim=-1)

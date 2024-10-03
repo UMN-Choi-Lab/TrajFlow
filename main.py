@@ -23,7 +23,7 @@ with wandb.init() as run:
 		'seed': random.randint(0, 2**32 - 1),
 		'encoder': 'GRU',
 		'flow': 'DNF',
-		'dataset': 'InD',
+		'dataset': 'EthUcy',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -47,6 +47,7 @@ with wandb.init() as run:
 		feature_dim = 5
 		embedding_dim = 128
 		hidden_dim = 512
+		evaulation_samples = 1000
 
 		ind = InD(
 			root="data",
@@ -61,9 +62,10 @@ with wandb.init() as run:
 		feature_dim = 4
 		embedding_dim = 128#16
 		hidden_dim = 512#32
+		evaulation_samples = 20
 
 		ethucy = EthUcy(train_batch_size=128, test_batch_size=1)
-		observation_site = ethucy.eth_observation_site
+		observation_site = ethucy.zara2_observation_site
 	else:
 		raise ValueError(f'{dataset.name} is not an experiment dataset')
 
@@ -116,8 +118,7 @@ with wandb.init() as run:
 		wandb.log({'loss': loss})
 			
 	if should_serialize:
-		model_name = 'test.pt'
-		#model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
+		model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
 		if should_train:
 			torch.save(traj_flow.state_dict(), model_name)
 		traj_flow.load_state_dict(torch.load(model_name))
@@ -126,7 +127,7 @@ with wandb.init() as run:
 		rmse, crps, min_ade, min_fde, nll = evaluate(
 			observation_site=observation_site,
 			model=traj_flow,
-			num_samples=1000, #20,
+			num_samples=evaulation_samples,
 			device=device)
 		
 		if verbose:
@@ -137,7 +138,7 @@ with wandb.init() as run:
 			print(f'nll: {nll}')
 		wandb.log({'rmse': rmse, 'crps': crps, 'min ade': min_ade, 'min fde': min_fde, 'nll': nll})
 
-	#if should_visualize:
+	if should_visualize:
 		# visualize(
 		# 	observation_site=ind.observation_site1,
 		# 	model=traj_flow,
@@ -147,12 +148,12 @@ with wandb.init() as run:
 		# 	output_dir='visualization',
 		# 	simple=simple_visualization,
 		# 	device=device)
-		# visualize_temp(
-		# 	data_loader=observation_site.test_loader,
-		# 	model=traj_flow,
-		# 	num_samples=10,
-		# 	steps=100,#1000,
-		# 	prob_threshold=0.001,
-		# 	output_dir='visualization_temp',
-		# 	simple=simple_visualization,
-		# 	device=device)
+		visualize_temp(
+			data_loader=observation_site.test_loader,
+			model=traj_flow,
+			num_samples=10,
+			steps=100,#1000,
+			prob_threshold=0.001,
+			output_dir='visualization_temp',
+			simple=simple_visualization,
+			device=device)
