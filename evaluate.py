@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn.functional as F
 
@@ -23,9 +24,15 @@ def crps(y_true, y_pred):
     return crps
 
 def min_ade(y_true, y_pred):
-    errors = torch.norm(y_pred - y_true, dim=-1)
-    ade = errors.mean(dim=-1)
-    return ade.min()
+    num_samples, seq_len, _ = y_pred.shape
+    ade = [1000 for _ in range(seq_len)]
+    for i in range(num_samples):
+        for j in range(seq_len):
+            x_squared = (y_pred[i][j][0] - y_true[0][j][0]) ** 2
+            y_squared = (y_pred[i][j][1] - y_true[0][j][1]) ** 2
+            l2_distance = math.sqrt(x_squared + y_squared)
+            ade[j] = min(ade[j], l2_distance)
+    return sum(ade) / y_pred.shape[1]
 
 def min_fde(y_true, y_pred):
     fde = torch.norm(y_pred[:,-1,:] - y_true[:,-1,:], dim=-1)
@@ -56,6 +63,7 @@ def evaluate(observation_site, model, num_samples, device):
             _, samples, _ = model.sample(test_input, test_feature, num_samples)
             test_target = torch.tensor(observation_site.denormalize(test_target.cpu().numpy())).to(device)
             samples = torch.tensor(observation_site.denormalize(samples.cpu().numpy())).to(device)
+
             rmse_sum += rmse(test_target, samples)
             crps_sum += crps(test_target, samples)
             min_ade_sum += min_ade(test_target, samples)

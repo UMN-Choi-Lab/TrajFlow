@@ -318,6 +318,8 @@ class EthUcy():
 		if data_source not in self.observation_sites:
 			spatial_boundaries = np.array([[np.inf, -np.inf], [np.inf, -np.inf]])
 			feature_boundaries = np.array([[np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf]])
+			# for i in range(25):
+			# 	feature_boundaries = np.append(feature_boundaries, [[np.inf, -np.inf]], axis=0)
 			train_scenes = self._load_data_source(data_source, 'train', spatial_boundaries, feature_boundaries)
 			#train_boundaries, train_loader = self._load_data_source(data_source, 'test', self.train_batch_size)
 			test_scenes = self._load_data_source(data_source, 'test', spatial_boundaries, feature_boundaries)

@@ -14,7 +14,7 @@ from visualize_temp import visualize_temp
 should_train = True
 should_serialize = False
 should_evaluate = True
-should_visualize = True
+should_visualize = False
 verbose = False
 simple_visualization = False
 
@@ -24,7 +24,7 @@ with wandb.init() as run:
 		'encoder': 'GRU',
 		'flow': 'DNF',
 		'dataset': 'InD',
-		'masked_data_ratio': 0.7
+		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
 
@@ -116,8 +116,8 @@ with wandb.init() as run:
 		wandb.log({'loss': loss})
 			
 	if should_serialize:
-		#model_name = 'traj_flow_CDE_CNF_0_190596211.pt'
-		model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
+		model_name = 'test.pt'
+		#model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
 		if should_train:
 			torch.save(traj_flow.state_dict(), model_name)
 		traj_flow.load_state_dict(torch.load(model_name))
@@ -126,7 +126,7 @@ with wandb.init() as run:
 		rmse, crps, min_ade, min_fde, nll = evaluate(
 			observation_site=observation_site,
 			model=traj_flow,
-			num_samples=1000,#20,
+			num_samples=20,#1000,
 			device=device)
 		
 		if verbose:
@@ -137,7 +137,7 @@ with wandb.init() as run:
 			print(f'nll: {nll}')
 		wandb.log({'rmse': rmse, 'crps': crps, 'min ade': min_ade, 'min fde': min_fde, 'nll': nll})
 
-	if should_visualize:
+	#if should_visualize:
 		# visualize(
 		# 	observation_site=ind.observation_site1,
 		# 	model=traj_flow,
@@ -147,12 +147,12 @@ with wandb.init() as run:
 		# 	output_dir='visualization',
 		# 	simple=simple_visualization,
 		# 	device=device)
-		visualize_temp(
-			data_loader=observation_site.test_loader,
-			model=traj_flow,
-			num_samples=10,
-			steps=100,#1000,
-			prob_threshold=0.001,
-			output_dir='visualization_temp',
-			simple=simple_visualization,
-			device=device)
+		# visualize_temp(
+		# 	data_loader=observation_site.test_loader,
+		# 	model=traj_flow,
+		# 	num_samples=10,
+		# 	steps=100,#1000,
+		# 	prob_threshold=0.001,
+		# 	output_dir='visualization_temp',
+		# 	simple=simple_visualization,
+		# 	device=device)
