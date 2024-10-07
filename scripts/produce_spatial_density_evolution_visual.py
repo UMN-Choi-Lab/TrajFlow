@@ -43,13 +43,11 @@ fig.legend(handles=legend_elements, fontsize=20)
 
 cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
 cbar = plt.colorbar(sm, cax=cbar_ax, label='Likelihood')
-cbar.set_label('Likelihood', fontsize=20)
-cbar.ax.tick_params(labelsize=10) 
+cbar.set_label('Likelihood', fontsize=25)
+cbar.ax.tick_params(labelsize=20) 
 
-file_name = 'visual_abstract.png'
+file_name = 'spatial_density_evolution.png'
 if os.path.exists(file_name):
     os.remove(file_name)
-fig.savefig(file_name, bbox_inches='tight')
-
-plt.tight_layout(rect=[0, 0, 0.9, 1]) 
+fig.savefig(file_name)
 plt.show()

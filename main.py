@@ -5,14 +5,14 @@ import torch
 from datasets.Dataset import Dataset
 from datasets.InD import InD
 from datasets.EthUcy import EthUcy
-from model.TrajFlow import TrajFlow,  CausalEnocder, Flow
+from model.TrajFlow import TrajFlow, CausalEnocder, Flow
 from train import train
 from evaluate import evaluate
 from visualize import visualize
 from visualize_temp import visualize_temp
 
 should_train = True
-should_serialize = False
+should_serialize = True
 should_evaluate = True
 should_visualize = False
 verbose = False
@@ -21,9 +21,9 @@ simple_visualization = False
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
-		'encoder': 'GRU',
-		'flow': 'DNF',
-		'dataset': 'EthUcy',
+		'encoder': 'CDE',
+		'flow': 'CNF',
+		'dataset': 'InD',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -118,7 +118,8 @@ with wandb.init() as run:
 		wandb.log({'loss': loss})
 			
 	if should_serialize:
-		model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
+		model_name = 'ind_marginal.pt'
+		#model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
 		if should_train:
 			torch.save(traj_flow.state_dict(), model_name)
 		traj_flow.load_state_dict(torch.load(model_name))
