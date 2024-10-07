@@ -23,7 +23,7 @@ with wandb.init() as run:
 		'seed': random.randint(0, 2**32 - 1),
 		'encoder': 'CDE',
 		'flow': 'CNF',
-		'dataset': 'InD',
+		'dataset': 'EthUcy',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -59,7 +59,7 @@ with wandb.init() as run:
 	elif dataset == Dataset.EthUcy:
 		seq_len = 12
 		input_dim = 2
-		feature_dim = 4
+		feature_dim = 29#4
 		embedding_dim = 128#16
 		hidden_dim = 512#32
 		evaulation_samples = 20
