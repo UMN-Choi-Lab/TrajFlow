@@ -5,12 +5,14 @@ metric:
   goal: minimize
 parameters:
   dataset: 
-    values: [InD]
+    values: [EthUcy]
+  observation_site:
+    values: [eth, hotel, univ, zara1, zara2]
   seed:     
     values: [3878625853, 3554420095, 2896009049, 4146594022, 3708304029]
   encoder:
-    values: [GRU, CDE]
+    values: [CDE]
   flow:
-    values: [DNF, CNF]
+    values: [CNF]
   masked_data_ratio: 
-    values: [0, 0.3, 0.5, 0.7]
+    values: [0]

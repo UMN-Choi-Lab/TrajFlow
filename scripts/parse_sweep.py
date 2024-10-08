@@ -3,7 +3,7 @@ from collections import defaultdict
 
 api = wandb.Api()
 
-sweep_id = 'akjlyrid'
+sweep_id = '05upvutu'
 sweep = api.sweep(f'mitchkos21-university-of-minnesota/trajflow_dry_run/{sweep_id}')
 
 config_counts = defaultdict(int)

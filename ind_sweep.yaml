@@ -1,0 +1,18 @@
+program: main.py
+method: grid
+metric:
+  name: nll
+  goal: minimize
+parameters:
+  dataset: 
+    values: [InD]
+  observation_site:
+    values: [1]
+  seed:     
+    values: [3878625853, 3554420095, 2896009049, 4146594022, 3708304029]
+  encoder:
+    values: [GRU, CDE]
+  flow:
+    values: [DNF, CNF]
+  masked_data_ratio: 
+    values: [0, 0.3, 0.5, 0.7]

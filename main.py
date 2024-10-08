@@ -12,7 +12,7 @@ from visualize import visualize
 from visualize_temp import visualize_temp
 
 should_train = True
-should_serialize = True
+should_serialize = False
 should_evaluate = True
 should_visualize = False
 verbose = False
@@ -24,6 +24,7 @@ with wandb.init() as run:
 		'encoder': 'CDE',
 		'flow': 'CNF',
 		'dataset': 'EthUcy',
+		'observation_site': 'zara2',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -59,12 +60,20 @@ with wandb.init() as run:
 	elif dataset == Dataset.EthUcy:
 		seq_len = 12
 		input_dim = 2
-		feature_dim = 29#4
+		feature_dim = 4
 		embedding_dim = 128#16
 		hidden_dim = 512#32
-		evaulation_samples = 20
+		evaulation_samples = 40
 
 		ethucy = EthUcy(train_batch_size=128, test_batch_size=1)
+		observation_site = (
+        	ethucy.eth_observation_site if run.config.observation_site == 'eth' else
+        	ethucy.hotel_observation_site if run.config.observation_site == 'hotel' else
+        	ethucy.univ_observation_site if run.config.observation_site == 'univ' else
+			ethucy.zara1_observation_site if run.config.observation_site == 'zara1' else
+			ethucy.zara2_observation_site if run.config.observation_site == 'zara2' else
+        	ethucy.zara2_observation_site
+    	)
 		observation_site = ethucy.zara2_observation_site
 	else:
 		raise ValueError(f'{dataset.name} is not an experiment dataset')
