@@ -63,7 +63,7 @@ with wandb.init() as run:
 		feature_dim = 4
 		embedding_dim = 128#16
 		hidden_dim = 512#32
-		evaulation_samples = 40
+		evaulation_samples = 20
 
 		ethucy = EthUcy(train_batch_size=128, test_batch_size=1)
 		observation_site = (
