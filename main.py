@@ -63,7 +63,7 @@ with wandb.init() as run:
 		feature_dim = 4
 		embedding_dim = 128#16
 		hidden_dim = 512#32
-		evaulation_samples = 20
+		evaulation_samples = 40
 
 		ethucy = EthUcy(train_batch_size=128, test_batch_size=1)
 		observation_site = (
@@ -74,7 +74,6 @@ with wandb.init() as run:
 			ethucy.zara2_observation_site if run.config.observation_site == 'zara2' else
         	ethucy.zara2_observation_site
     	)
-		observation_site = ethucy.zara2_observation_site
 	else:
 		raise ValueError(f'{dataset.name} is not an experiment dataset')
 
