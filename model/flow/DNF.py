@@ -31,7 +31,7 @@ class RunningAverageBatchNorm(nn.Module):
         self.register_buffer("running_mean", torch.zeros(input_size))
         self.register_buffer("running_var", torch.ones(input_size))
 
-    def forward(self, x, cond_y=None):
+    def forward(self, x, cond_y):
         if self.training:
             self.batch_mean = x.view(-1, x.shape[-1]).mean(0)
             self.batch_var = x.view(-1, x.shape[-1]).var(0)
@@ -51,7 +51,7 @@ class RunningAverageBatchNorm(nn.Module):
         
         return y, log_abs_det_jacobian.expand_as(x)
 
-    def inverse(self, y, cond_y=None):
+    def inverse(self, y, cond_y):
         if self.training:
             mean = self.batch_mean
             var = self.batch_var
@@ -67,12 +67,15 @@ class RunningAverageBatchNorm(nn.Module):
     
 
 class AffineCouplingLayer(nn.Module):
-    def __init__(self, input_size, hidden_size, n_hidden, mask, cond_label_size=0):
+    def __init__(self, input_size, hidden_size, n_hidden, mask, cond_label_size, marginal):
         super().__init__()
+
+        self.marginal = marginal
 
         self.register_buffer("mask", mask)
 
-        s_net = [nn.Linear(input_size + 1 + cond_label_size, hidden_size,)]
+        positional_encoding_size = 1 if marginal else 0
+        s_net = [nn.Linear(input_size + positional_encoding_size + cond_label_size, hidden_size,)]
         for _ in range(n_hidden):
             s_net += [nn.ReLU(), nn.Linear(hidden_size, hidden_size)]
         s_net += [nn.ReLU(), nn.Linear(hidden_size, input_size)]
@@ -80,15 +83,19 @@ class AffineCouplingLayer(nn.Module):
 
         self.t_net = copy.deepcopy(self.s_net)
 
-    def forward(self, x, y=None):
+    def forward(self, x, y):
         mx = x * self.mask
-        y = y.unsqueeze(1).expand(-1, mx.shape[1], -1) if y is not None else None
-
-        index = (torch.cumsum(torch.ones_like(x)[:, :, 0], 1) / x.shape[1]).unsqueeze(-1)
+        y = y.unsqueeze(1).expand(-1, mx.shape[1], -1) if self.marginal else y
+        
+        if self.marginal:
+            index = (torch.cumsum(torch.ones_like(x)[:, :, 0], 1) / x.shape[1]).unsqueeze(-1)
+            input = torch.cat([y, index, mx], dim=-1) 
+        else :
+            input = torch.cat([y, mx], dim=-1)
 
         # run through model
-        s = self.s_net(mx if y is None else torch.cat([y, index, mx], dim=-1))
-        t = self.t_net(mx if y is None else torch.cat([y, index, mx], dim=-1)) * (1 - self.mask)
+        s = self.s_net(input)
+        t = self.t_net(input) * (1 - self.mask)
         
         log_s = torch.tanh(s) * (1 - self.mask)
         u = x * torch.exp(log_s) + t
@@ -96,15 +103,19 @@ class AffineCouplingLayer(nn.Module):
         
         return u, log_abs_det_jacobian
 
-    def inverse(self, u, y=None):
+    def inverse(self, u, y):
         mu = u * self.mask
-        y = y.unsqueeze(1).expand(-1, mu.shape[1], -1) if y is not None else None
+        y = y.unsqueeze(1).expand(-1, mu.shape[1], -1) if self.marginal else y
 
-        index = (torch.cumsum(torch.ones_like(u)[:, :, 0], 1) / u.shape[1]).unsqueeze(-1)
+        if self.marginal:
+            index = (torch.cumsum(torch.ones_like(u)[:, :, 0], 1) / u.shape[1]).unsqueeze(-1)
+            input = torch.cat([y, index, mu], dim=-1)
+        else:
+            input = torch.cat([y, mu], dim=-1)
 
         # run through model
-        s = self.s_net(mu if y is None else torch.cat([y, index, mu], dim=-1))
-        t = self.t_net(mu if y is None else torch.cat([y, index, mu], dim=-1)) * (1 - self.mask)
+        s = self.s_net(input)
+        t = self.t_net(input) * (1 - self.mask)
         
         log_s = torch.tanh(s) * (1 - self.mask)
         x = (u - t) * torch.exp(-log_s)
@@ -114,12 +125,12 @@ class AffineCouplingLayer(nn.Module):
 
 
 class DNF(nn.Module):
-    def __init__(self, n_blocks, input_size, hidden_size, n_hidden, cond_label_size=None, batch_norm=True):
+    def __init__(self, n_blocks, input_size, hidden_size, n_hidden, cond_label_size, marginal, batch_norm=True):
         super().__init__()
         modules = []
         mask = torch.arange(input_size).float() % 2
         for _ in range(n_blocks):
-            modules += [AffineCouplingLayer(input_size, hidden_size, n_hidden, mask, cond_label_size)]
+            modules += [AffineCouplingLayer(input_size, hidden_size, n_hidden, mask, cond_label_size, marginal)]
             mask = 1 - mask
             modules += batch_norm * [RunningAverageBatchNorm(input_size)]
 

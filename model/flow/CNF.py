@@ -6,32 +6,51 @@ from model.layers.MovingBatchNorm import MovingBatchNorm1d
 from model.layers.SquashLinear import ConcatSquashLinear
 	
 class ODEFunc(nn.Module):
-	def __init__(self, input_dim, condition_dim, hidden_dims):
+	def __init__(self, input_dim, condition_dim, hidden_dims, marginal):
 		super(ODEFunc, self).__init__()
+
+		self.marginal = marginal
+
+		temporal_context_dim = 2 if marginal else 1
 		dim_list = [input_dim] + list(hidden_dims) + [input_dim]
+		
 		layers = []
 		for i in range(len(dim_list) - 1):
-			layers.append(ConcatSquashLinear(dim_list[i], dim_list[i + 1], condition_dim + 2))
+			layers.append(ConcatSquashLinear(dim_list[i], dim_list[i + 1], condition_dim + temporal_context_dim))
 		self.layers = nn.ModuleList(layers)
 
-	def _z_dot(self, t, z, condition):
-		positional_encoding = (torch.cumsum(torch.ones_like(z)[:, :, 0], 1) / z.shape[1]).unsqueeze(-1)
-		time_encoding = t.expand(z.shape[0], z.shape[1], 1)
-		condition = condition.unsqueeze(1).expand(-1, z.shape[1], -1)
-		tpc = torch.cat([positional_encoding, time_encoding, condition], dim=-1)
+	def _z_dot(self, t, z, condition):		
+		if self.marginal:
+			condition = condition.unsqueeze(1).expand(-1, z.shape[1], -1)
+			time_encoding = t.expand(z.shape[0], z.shape[1], 1)
+			positional_encoding = (torch.cumsum(torch.ones_like(z)[:, :, 0], 1) / z.shape[1]).unsqueeze(-1)
+			context = torch.cat([positional_encoding, time_encoding, condition], dim=-1)
+		else:
+			time_encoding = t.expand(z.shape[0], 1)
+			context = torch.cat([time_encoding, condition], dim=-1)
+
 		z_dot = z
 		for l, layer in enumerate(self.layers):
-			z_dot = layer(tpc, z_dot)
+			z_dot = layer(context, z_dot)
 			if l < len(self.layers) - 1:
 				z_dot = F.tanh(z_dot)
 		return z_dot
 	
-	def _jacobian_trace(seld, z_dot, z):
+	def _jacobian_trace_joint(self, z_dot, z): # might need hutchson estimator here for efficency
+		trace = 0.0
+		for i in range(z_dot.shape[1]):
+			trace += torch.autograd.grad(z_dot[:, i].sum(), z, create_graph=True)[0][:, i]
+		return trace
+
+	def _jacobian_trace_marginal(self, z_dot, z):
 		batch_size, seq_len, dim = z.shape
 		trace = torch.zeros(batch_size, seq_len, device=z.device)
 		for i in range(dim):
 			trace += torch.autograd.grad(z_dot[:, :, i].sum(), z, create_graph=True)[0][:, :, i]
 		return trace
+	
+	def _jacobian_trace(self, z_dot, z):
+		return self._jacobian_trace_marginal(z_dot, z) if self.marginal else self._jacobian_trace_joint(z_dot, z)
 	
 	def forward(self, t, states):
 		z = states[0]
@@ -48,16 +67,17 @@ class ODEFunc(nn.Module):
 
 
 class CNF(torch.nn.Module):
-	def __init__(self, input_dim, condition_dim, hidden_dims):
+	def __init__(self, input_dim, condition_dim, hidden_dims, marginal):
 		super(CNF, self).__init__()
-		self.time_derivative = ODEFunc(input_dim, condition_dim, hidden_dims)
+		self.marginal = marginal
+		self.time_derivative = ODEFunc(input_dim, condition_dim, hidden_dims, marginal)
 		self.condition_norm = nn.LayerNorm(condition_dim)
 		self.n1 = MovingBatchNorm1d(input_dim)
 		self.n2 = MovingBatchNorm1d(input_dim)
 
 	def forward(self, z, condition, delta_logpz=None, integration_times=None, reverse=False):
 		if delta_logpz is None:
-			delta_logpz = torch.zeros(z.shape[0], z.shape[1], 1).to(z)
+			delta_logpz = torch.zeros(z.shape[0], z.shape[1], 1).to(z) if self.marginal else torch.zeros(z.shape[0], 1).to(z)
 		if integration_times is None:
 			integration_times = torch.tensor([0.0, 1.0]).to(z)
 		if reverse:

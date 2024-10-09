@@ -63,7 +63,7 @@ with wandb.init() as run:
 		feature_dim = 4
 		embedding_dim = 128#16
 		hidden_dim = 512#32
-		evaulation_samples = 40
+		evaulation_samples = 20
 
 		ethucy = EthUcy(train_batch_size=128, test_batch_size=1)
 		observation_site = (
@@ -86,7 +86,8 @@ with wandb.init() as run:
 		embedding_dim=embedding_dim,
 		hidden_dim=hidden_dim,
 		causal_encoder=causal_encoder,
-		flow=flow).to(device)
+		flow=flow,
+		marginal=False).to(device)
 	num_parameters = sum(p.numel() for p in traj_flow.parameters() if p.requires_grad)
 	wandb.log({'parameters': num_parameters})
 

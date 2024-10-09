@@ -33,23 +33,34 @@ def construct_causal_enocder(input_dim, embedding_dim, num_layers, causal_encode
 		raise ValueError(f'{causal_encoder.name} is not a supported causal encoder')
 
 
-def construct_flow(input_dim, condition_dim, hidden_dim, flow):
+def construct_flow(input_dim, condition_dim, hidden_dim, flow, marginal):
 	if flow == Flow.DNF:
-		return DNF(n_blocks=3, input_size=input_dim, hidden_size=hidden_dim, n_hidden=10, cond_label_size=condition_dim)
+		return DNF(n_blocks=3, input_size=input_dim, hidden_size=hidden_dim, n_hidden=10, 
+			cond_label_size=condition_dim, marginal=marginal)
 	elif flow == Flow.CNF:
-		return CNF(input_dim, condition_dim, (hidden_dim for _ in range(4)))
+		return CNF(input_dim, condition_dim, (hidden_dim for _ in range(4)), marginal)
 	else:
 		raise ValueError(f'{flow.name} is not a supported normalizing flow')
 
 
 class TrajFlow(nn.Module):
-	def __init__(self, seq_len, input_dim, feature_dim, embedding_dim, hidden_dim, causal_encoder, flow):
+	def __init__(self, seq_len, input_dim, feature_dim, embedding_dim, hidden_dim, causal_encoder, flow, marginal=False):
 		super(TrajFlow, self).__init__()
-		self.causal_encoder = construct_causal_enocder(input_dim + feature_dim, embedding_dim, 4, causal_encoder)
-		self.flow = construct_flow(input_dim, embedding_dim, hidden_dim, flow)
+		self.marginal = marginal
+		self.seq_len = seq_len
+		self.input_dim = input_dim
 
-		self.register_buffer("base_dist_mean", torch.zeros(seq_len, input_dim))
-		self.register_buffer("base_dist_var", torch.ones(seq_len, input_dim))
+		flow_input_dim = input_dim if marginal else seq_len * input_dim
+
+		self.causal_encoder = construct_causal_enocder(input_dim + feature_dim, embedding_dim, 4, causal_encoder)
+		self.flow = construct_flow(flow_input_dim, embedding_dim, hidden_dim, flow, marginal)
+
+		if marginal:
+			self.register_buffer("base_dist_mean", torch.zeros(seq_len, input_dim))
+			self.register_buffer("base_dist_var", torch.ones(seq_len, input_dim))
+		else:
+			self.register_buffer("base_dist_mean", torch.zeros(seq_len * input_dim))
+			self.register_buffer("base_dist_var", torch.ones(seq_len * input_dim))
 
 	@property
 	def _base_dist(self):
@@ -65,17 +76,22 @@ class TrajFlow(nn.Module):
 
 	def forward(self, x, y, feat):
 		embedding = self._embedding(x, feat)
+		y = y if self.marginal else y.view(y.shape[0], self.seq_len * self.input_dim)
 		z, delta_logpz = self.flow(y, embedding)
+		z = z if self.marginal else z.view(z.shape[0], self.seq_len, self.input_dim)
 		return z, delta_logpz
 	
 	def sample(self, x, feat, num_samples=1):
 		y = torch.stack([self._base_dist.sample().to(x.device) for _ in range(num_samples)])
+		y = y if self.marginal else y.view(y.shape[0], self.seq_len * self.input_dim)
 		embedding = self._embedding(x, feat)
 		embedding = embedding.expand(y.shape[0], embedding.shape[1])
 		z, delta_logpz = self.flow(y, embedding, reverse=True)
+		z = z if self.marginal else z.view(z.shape[0], self.seq_len, self.input_dim)
 		return y, z, delta_logpz
 
 	def log_prob(self, z_t0, delta_logpz):
+		z_t0 = z_t0 if self.marginal else z_t0.view(z_t0.shape[0], self.seq_len * self.input_dim)
 		logpz_t0 = self._base_dist.log_prob(z_t0)
 		logpz_t1 = logpz_t0 - delta_logpz
 		return logpz_t0, logpz_t1
