@@ -57,7 +57,8 @@ traj_flow = TrajFlow(
 		embedding_dim=128,
 		hidden_dim=512,
 		causal_encoder=CausalEnocder.CDE,
-		flow=Flow.CNF).to(device)
+		flow=Flow.CNF,
+        marginal=True).to(device)
 traj_flow.load_state_dict(torch.load('ind_marginal.pt'))
 
 background = plt.imread('data\\paper_background.png')

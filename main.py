@@ -21,10 +21,10 @@ simple_visualization = False
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
-		'encoder': 'CDE',
-		'flow': 'CNF',
+		'encoder': 'GRU',
+		'flow': 'DNF',
 		'dataset': 'EthUcy',
-		'observation_site': 'zara2',
+		'observation_site': 'zara1',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -48,7 +48,7 @@ with wandb.init() as run:
 		feature_dim = 5
 		embedding_dim = 128
 		hidden_dim = 512
-		evaulation_samples = 1000
+		evaulation_samples = 20#1000
 
 		ind = InD(
 			root="data",
@@ -128,6 +128,7 @@ with wandb.init() as run:
 			
 	if should_serialize:
 		model_name = 'ind_marginal.pt'
+		#model_name = 'ind_joint.pt'
 		#model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
 		if should_train:
 			torch.save(traj_flow.state_dict(), model_name)

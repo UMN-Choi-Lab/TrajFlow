@@ -49,6 +49,7 @@ class TrajFlow(nn.Module):
 		self.marginal = marginal
 		self.seq_len = seq_len
 		self.input_dim = input_dim
+		self.alpha = 10
 
 		flow_input_dim = input_dim if marginal else seq_len * input_dim
 
@@ -65,6 +66,16 @@ class TrajFlow(nn.Module):
 	@property
 	def _base_dist(self):
 		return torch.distributions.MultivariateNormal(self.base_dist_mean, torch.diag_embed(self.base_dist_var))
+	
+	def _abs_to_rel(self, y, x_t):
+		y_rel = y - x_t
+		y_rel[:,1:] = (y_rel[:,1:] - y_rel[:,:-1])
+		y_rel = y_rel * self.alpha
+		return y_rel
+
+	def _rel_to_abs(self, y_rel, x_t):
+		y_abs = y_rel / self.alpha
+		return torch.cumsum(y_abs, dim=-2) + x_t 
 
 	def _embedding(self, x, feat):
 		_, seq_length, _ = x.shape
@@ -75,20 +86,30 @@ class TrajFlow(nn.Module):
 		return embedding
 
 	def forward(self, x, y, feat):
-		embedding = self._embedding(x, feat)
+		if not self.marginal:
+			x_t = x[...,-1:,:]
+			y = self._abs_to_rel(y, x_t)
 		y = y if self.marginal else y.view(y.shape[0], self.seq_len * self.input_dim)
+		embedding = self._embedding(x, feat)
 		z, delta_logpz = self.flow(y, embedding)
 		z = z if self.marginal else z.view(z.shape[0], self.seq_len, self.input_dim)
 		return z, delta_logpz
 	
 	def sample(self, x, feat, num_samples=1):
 		y = torch.stack([self._base_dist.sample().to(x.device) for _ in range(num_samples)])
-		y = y if self.marginal else y.view(y.shape[0], self.seq_len * self.input_dim)
 		embedding = self._embedding(x, feat)
 		embedding = embedding.expand(y.shape[0], embedding.shape[1])
 		z, delta_logpz = self.flow(y, embedding, reverse=True)
-		z = z if self.marginal else z.view(z.shape[0], self.seq_len, self.input_dim)
-		return y, z, delta_logpz
+		if not self.marginal:
+			output_shape = (x.size(0), num_samples, self.seq_len, 2)
+			z = z.view(*output_shape)
+			x_t = x[...,-1:,:]
+			#x_t = x_t[0].repeat(1, self.seq_len).unsqueeze(0)
+			x_t = x[..., -1:, :].unsqueeze(dim=1).repeat(1, num_samples, 1, 1)
+			z = self._rel_to_abs(z, x_t)[0]
+			#z = self._rel_to_abs(z, x_t)[0]
+		#z = z if self.marginal else z.view(z.shape[0], self.seq_len, self.input_dim)
+		return y, z, delta_logpz # why might not be the correct shape for joint densities
 
 	def log_prob(self, z_t0, delta_logpz):
 		z_t0 = z_t0 if self.marginal else z_t0.view(z_t0.shape[0], self.seq_len * self.input_dim)
