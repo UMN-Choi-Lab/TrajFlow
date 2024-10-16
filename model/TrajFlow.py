@@ -109,7 +109,7 @@ class TrajFlow(nn.Module):
 			z = self._rel_to_abs(z, x_t)[0]
 			#z = self._rel_to_abs(z, x_t)[0]
 		#z = z if self.marginal else z.view(z.shape[0], self.seq_len, self.input_dim)
-		return y, z, delta_logpz # why might not be the correct shape for joint densities
+		return y, z, delta_logpz # y might not be the correct shape for joint densities
 
 	def log_prob(self, z_t0, delta_logpz):
 		z_t0 = z_t0 if self.marginal else z_t0.view(z_t0.shape[0], self.seq_len * self.input_dim)

@@ -9,7 +9,7 @@ parameters:
   observation_site:
     values: [eth, hotel, univ, zara1, zara2]
   seed:     
-    values: [3878625853, 3554420095, 2896009049, 4146594022]
+    values: [3878625853]
   encoder:
     values: [CDE]
   flow:
