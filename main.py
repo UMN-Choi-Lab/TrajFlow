@@ -87,7 +87,7 @@ with wandb.init() as run:
 		hidden_dim=hidden_dim,
 		causal_encoder=causal_encoder,
 		flow=flow,
-		marginal=False).to(device)
+		marginal=True).to(device)
 	num_parameters = sum(p.numel() for p in traj_flow.parameters() if p.requires_grad)
 	wandb.log({'parameters': num_parameters})
 
@@ -127,8 +127,8 @@ with wandb.init() as run:
 		wandb.log({'loss': loss})
 			
 	if should_serialize:
-		model_name = 'ind_marginal.pt'
-		#model_name = 'ind_joint.pt'
+		#model_name = 'ind_marginal.pt'
+		model_name = 'ind_joint.pt'
 		#model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
 		if should_train:
 			torch.save(traj_flow.state_dict(), model_name)
