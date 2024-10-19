@@ -395,8 +395,6 @@ class FloMo(nn.Module):
 
     def _rel_to_abs(self, y_rel, x_t):
         y_abs = y_rel / self.alpha
-        print(y_abs.shape)
-        print(x_t.shape)
         return torch.cumsum(y_abs, dim=-2) + x_t
 
     def _rotate(self, x, x_t, angles_rad):
@@ -465,9 +463,7 @@ class FloMo(nn.Module):
             # sample and compute likelihoods
             z = torch.randn([n_total, self.output_size]).to(self.device)
             samples_rel, log_det = self.flow(z, x_enc_expanded)
-            print(f'samples rel shape: {samples_rel.shape}')
             samples_rel = samples_rel.view(*output_shape)
-            print(f'samples rel shape2: {samples_rel.shape}')
             normal = Normal(0, 1, validate_args=True)
             log_probs = (normal.log_prob(z).sum(1) - log_det).view((x.size(0), -1))
 

@@ -8,37 +8,37 @@ from tqdm import tqdm
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 ethucy = EthUcy(train_batch_size=128, test_batch_size=1)
-observation_site = ethucy.zara1_observation_site
+observation_site = ethucy.hotel_observation_site
 #ind = InD(root="data", train_ratio=0.75, train_batch_size=64, test_batch_size=1, missing_rate=0)
 #observation_site = ind.observation_site1
 #flomo = FloMo(hist_size=100, pred_steps=100, alpha=3, beta=0.002, gamma=0.002, num_in=2, num_feat=0).to(device)
-flomo = FloMo(hist_size=8, pred_steps=12, alpha=10, beta=0.02, gamma=0.002, num_in=2, num_feat=0).to(device)
+flomo = FloMo(hist_size=8, pred_steps=12, alpha=10, beta=0.2, gamma=0.02, num_in=2, num_feat=0).to(device)
 
 flomo.train()
 
 optim = torch.optim.Adam(flomo.parameters(), lr=1e-3, weight_decay=0)
 scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=0.999)
 
-# for epoch in range(25):
-#     losses = []
-#     for input, _, target in (pbar := tqdm(observation_site.train_loader)):
-#         input = input.to(device)
-#         target = target.to(device)
+for epoch in range(25):
+    losses = []
+    for input, _, target in (pbar := tqdm(observation_site.train_loader)):
+        input = input.to(device)
+        target = target.to(device)
 
-#         log_prob = flomo.log_prob(target, input)
-#         loss = -torch.mean(log_prob)
+        log_prob = flomo.log_prob(target, input)
+        loss = -torch.mean(log_prob)
             
-#         optim.zero_grad()
-#         loss.backward()
-#         optim.step()
-#         scheduler.step()
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+        scheduler.step()
             
-#         losses.append(loss)
+        losses.append(loss)
 
-#         pbar.set_description(f'Epoch {epoch} Loss {loss.item():.4f}')
+        pbar.set_description(f'Epoch {epoch} Loss {loss.item():.4f}')
 
-#     losses = torch.stack(losses)
-#     pbar.set_description(f'Epoch {epoch} Loss {torch.mean(losses):.4f}')
+    losses = torch.stack(losses)
+    pbar.set_description(f'Epoch {epoch} Loss {torch.mean(losses):.4f}')
 
 def rmse(y_true, y_pred):
     mse = F.mse_loss(y_true.expand_as(y_pred), y_pred, reduction="mean")
@@ -91,8 +91,12 @@ with torch.no_grad():
 
         # sample based evaluation
         samples, _ = flomo.sample(20, test_input)
+        #print(samples.shape)
         test_target = torch.tensor(observation_site.denormalize(test_target.cpu().numpy())).to(device)
         samples = torch.tensor(observation_site.denormalize(samples.cpu().numpy())).to(device)
+        #print(f'input: {test_input}')
+        #print(f'target: {test_target}')
+        #print(f'perdicted: {samples}')
 
         rmse_sum += rmse(test_target, samples)
         crps_sum += crps(test_target, samples)

@@ -89,10 +89,11 @@ class TrajFlow(nn.Module):
 		if not self.marginal:
 			x_t = x[...,-1:,:]
 			y = self._abs_to_rel(y, x_t)
-		y = y if self.marginal else y.view(y.shape[0], self.seq_len * self.input_dim)
+		batch, seq_len, input_dim = y.shape
+		y = y if self.marginal else y.view(batch, seq_len * input_dim)
 		embedding = self._embedding(x, feat)
 		z, delta_logpz = self.flow(y, embedding)
-		z = z if self.marginal else z.view(z.shape[0], self.seq_len, self.input_dim)
+		z = z if self.marginal else z.view(batch, seq_len, input_dim)
 		return z, delta_logpz
 	
 	def sample(self, x, feat, num_samples=1):
@@ -112,7 +113,14 @@ class TrajFlow(nn.Module):
 		return y, z, delta_logpz # y might not be the correct shape for joint densities
 
 	def log_prob(self, z_t0, delta_logpz):
-		z_t0 = z_t0 if self.marginal else z_t0.view(z_t0.shape[0], self.seq_len * self.input_dim)
-		logpz_t0 = self._base_dist.log_prob(z_t0)
+		batch, seq_len, input_dim = z_t0.shape
+		z_t0 = z_t0 if self.marginal else z_t0.view(batch, seq_len * input_dim)
+		#logpz_t0 = self._base_dist.log_prob(z_t0)
+		#begin experimental
+		mean = torch.zeros(seq_len, input_dim).to(z_t0.device)
+		variance = torch.ones(seq_len, input_dim).to(z_t0.device)
+		base_dist = torch.distributions.MultivariateNormal(mean, torch.diag_embed(variance))
+		logpz_t0 = base_dist.log_prob(z_t0)
+		#end experimental
 		logpz_t1 = logpz_t0 - delta_logpz
 		return logpz_t0, logpz_t1

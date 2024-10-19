@@ -12,9 +12,9 @@ from visualize import visualize
 from visualize_temp import visualize_temp
 
 should_train = True
-should_serialize = False
+should_serialize = True
 should_evaluate = True
-should_visualize = False
+should_visualize = True
 verbose = False
 simple_visualization = False
 
@@ -127,8 +127,8 @@ with wandb.init() as run:
 		wandb.log({'loss': loss})
 			
 	if should_serialize:
-		#model_name = 'ind_marginal.pt'
-		model_name = 'ind_joint.pt'
+		model_name = 'ind_marginal.pt'
+		#model_name = 'ind_joint.pt'
 		#model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
 		if should_train:
 			torch.save(traj_flow.state_dict(), model_name)

@@ -88,7 +88,8 @@ class AffineCouplingLayer(nn.Module):
         y = y.unsqueeze(1).expand(-1, mx.shape[1], -1) if self.marginal else y
         
         if self.marginal:
-            index = (torch.cumsum(torch.ones_like(x)[:, :, 0], 1) / x.shape[1]).unsqueeze(-1)
+            #index = (torch.cumsum(torch.ones_like(x)[:, :, 0], 1) / x.shape[1]).unsqueeze(-1)
+            index = torch.cumsum(torch.ones_like(x)[:, :, 0], 1).unsqueeze(-1)
             input = torch.cat([y, index, mx], dim=-1) 
         else :
             input = torch.cat([y, mx], dim=-1)
@@ -108,7 +109,8 @@ class AffineCouplingLayer(nn.Module):
         y = y.unsqueeze(1).expand(-1, mu.shape[1], -1) if self.marginal else y
 
         if self.marginal:
-            index = (torch.cumsum(torch.ones_like(u)[:, :, 0], 1) / u.shape[1]).unsqueeze(-1)
+            #index = (torch.cumsum(torch.ones_like(u)[:, :, 0], 1) / u.shape[1]).unsqueeze(-1)
+            index = torch.cumsum(torch.ones_like(u)[:, :, 0], 1).unsqueeze(-1)
             input = torch.cat([y, index, mu], dim=-1)
         else:
             input = torch.cat([y, mu], dim=-1)

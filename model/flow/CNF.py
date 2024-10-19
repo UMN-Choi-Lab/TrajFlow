@@ -24,6 +24,7 @@ class ODEFunc(nn.Module):
 			condition = condition.unsqueeze(1).expand(-1, z.shape[1], -1)
 			time_encoding = t.expand(z.shape[0], z.shape[1], 1)
 			positional_encoding = (torch.cumsum(torch.ones_like(z)[:, :, 0], 1) / z.shape[1]).unsqueeze(-1)
+			#positional_encoding = torch.cumsum(torch.ones_like(z)[:, :, 0], 1).unsqueeze(-1)
 			context = torch.cat([positional_encoding, time_encoding, condition], dim=-1)
 		else:
 			time_encoding = t.expand(z.shape[0], 1)
