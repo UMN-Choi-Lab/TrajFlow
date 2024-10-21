@@ -52,9 +52,8 @@ def evaluate(observation_site, model, num_samples, device):
             z_t0, delta_logpz = model(test_input, test_target, test_feature)
             logpz_t0, logpz_t1 = model.log_prob(z_t0, delta_logpz)
             nll_sum += -torch.mean(logpz_t1)
-
-            # sample based evaluation
-            _, samples, _ = model.sample(test_input, test_feature, num_samples)
+            
+            _, samples, _ = model.sample(test_input, test_feature, test_target.shape[1], num_samples)
             test_target = torch.tensor(observation_site.denormalize(test_target.cpu().numpy())).to(device)
             samples = torch.tensor(observation_site.denormalize(samples.cpu().numpy())).to(device)
 

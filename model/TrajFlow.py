@@ -56,15 +56,15 @@ class TrajFlow(nn.Module):
 		self.causal_encoder = construct_causal_enocder(input_dim + feature_dim, embedding_dim, 4, causal_encoder)
 		self.flow = construct_flow(flow_input_dim, embedding_dim, hidden_dim, flow, marginal)
 
-		if marginal:
-			self.register_buffer("base_dist_mean", torch.zeros(seq_len, input_dim))
-			self.register_buffer("base_dist_var", torch.ones(seq_len, input_dim))
-		else:
-			self.register_buffer("base_dist_mean", torch.zeros(seq_len * input_dim))
-			self.register_buffer("base_dist_var", torch.ones(seq_len * input_dim))
+		#if marginal:
+		#	self.register_buffer("base_dist_mean", torch.zeros(seq_len, input_dim))
+		#	self.register_buffer("base_dist_var", torch.ones(seq_len, input_dim))
+		#else:
+		#	self.register_buffer("base_dist_mean", torch.zeros(seq_len * input_dim))
+		#	self.register_buffer("base_dist_var", torch.ones(seq_len * input_dim))
 
-	@property
-	def _base_dist(self):
+	#@property
+	def _base_dist(self, mean, variance):
 		return torch.distributions.MultivariateNormal(self.base_dist_mean, torch.diag_embed(self.base_dist_var))
 	
 	def _abs_to_rel(self, y, x_t):
@@ -96,8 +96,13 @@ class TrajFlow(nn.Module):
 		z = z if self.marginal else z.view(batch, seq_len, input_dim)
 		return z, delta_logpz
 	
-	def sample(self, x, feat, num_samples=1):
-		y = torch.stack([self._base_dist.sample().to(x.device) for _ in range(num_samples)])
+	def sample(self, x, feat, futures, num_samples=1):
+		# kinda jank.... maybe we should clean up
+		mean = (torch.zeros(futures, self.input_dim) if self.marginal else torch.zeros(self.seq_len * self.input_dim)).to(x.device)
+		variance = (torch.ones(futures, self.input_dim) if self.marginal else torch.ones(self.seq_len * self.input_dim)).to(x.device)
+		base_dist = torch.distributions.MultivariateNormal(mean, torch.diag_embed(variance))
+		#y = torch.stack([self._base_dist.sample().to(x.device) for _ in range(num_samples)])
+		y = torch.stack([base_dist.sample().to(x.device) for _ in range(num_samples)])
 		embedding = self._embedding(x, feat)
 		embedding = embedding.expand(y.shape[0], embedding.shape[1])
 		z, delta_logpz = self.flow(y, embedding, reverse=True)
@@ -117,8 +122,8 @@ class TrajFlow(nn.Module):
 		z_t0 = z_t0 if self.marginal else z_t0.view(batch, seq_len * input_dim)
 		#logpz_t0 = self._base_dist.log_prob(z_t0)
 		#begin experimental
-		mean = torch.zeros(seq_len, input_dim).to(z_t0.device)
-		variance = torch.ones(seq_len, input_dim).to(z_t0.device)
+		mean = (torch.zeros(seq_len, input_dim) if self.marginal else torch.zeros(seq_len * input_dim)).to(z_t0.device)
+		variance = (torch.ones(seq_len, input_dim) if self.marginal else torch.ones(seq_len * input_dim)).to(z_t0.device)
 		base_dist = torch.distributions.MultivariateNormal(mean, torch.diag_embed(variance))
 		logpz_t0 = base_dist.log_prob(z_t0)
 		#end experimental

@@ -8,13 +8,15 @@ from datasets.EthUcy import EthUcy
 from model.TrajFlow import TrajFlow, CausalEnocder, Flow
 from train import train
 from evaluate import evaluate
+from evaluate_generalizability import evaluate_generalizability
 from visualize import visualize
 from visualize_temp import visualize_temp
 
 should_train = True
-should_serialize = True
-should_evaluate = True
-should_visualize = True
+should_serialize = False
+should_evaluate = False
+should_evaluate_generalizability = True
+should_visualize = False
 verbose = False
 simple_visualization = False
 
@@ -65,7 +67,7 @@ with wandb.init() as run:
 		hidden_dim = 512#32
 		evaulation_samples = 20
 
-		ethucy = EthUcy(train_batch_size=128, test_batch_size=1)
+		ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12)
 		observation_site = (
         	ethucy.eth_observation_site if run.config.observation_site == 'eth' else
         	ethucy.hotel_observation_site if run.config.observation_site == 'hotel' else
@@ -148,6 +150,18 @@ with wandb.init() as run:
 			print(f'min fde: {min_fde}')
 			print(f'nll: {nll}')
 		wandb.log({'rmse': rmse, 'crps': crps, 'min ade': min_ade, 'min fde': min_fde, 'nll': nll})
+
+	if should_evaluate_generalizability:
+		generalized_min_ade, generalized_min_fde = evaluate_generalizability(
+			observation_site_name=run.config.observation_site,
+			model=traj_flow,
+			num_samples=evaulation_samples,
+			device=device)
+		
+		if verbose:
+			print(f'generalized min ade: {generalized_min_ade}')
+			print(f'generalized min fde: {generalized_min_fde}')
+		wandb.log({'generalized min ade': generalized_min_ade, 'generalized min fde': generalized_min_fde})
 
 	if should_visualize:
 		# visualize(

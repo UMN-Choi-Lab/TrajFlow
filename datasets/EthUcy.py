@@ -12,24 +12,7 @@ def normalize(data, boundaries):
 def denormalize(data, boundaries):
 	return (data * (boundaries[:, 1] - boundaries[:, 0])) + boundaries[:, 0]
 
-def make_continuous_copy(alpha):
-	alpha = (alpha + np.pi) % (2.0 * np.pi) - np.pi
-	continuous_x = np.zeros_like(alpha)
-	continuous_x[0] = alpha[0]
-	for i in range(1, len(alpha)):
-		if not (np.sign(alpha[i]) == np.sign(alpha[i - 1])) and np.abs(alpha[i]) > np.pi / 2:
-			continuous_x[i] = continuous_x[i - 1] + (
-					alpha[i] - alpha[i - 1]) - np.sign(
-				(alpha[i] - alpha[i - 1])) * 2 * np.pi
-		else:
-			continuous_x[i] = continuous_x[i - 1] + (alpha[i] - alpha[i - 1])
-
-	return continuous_x
-
-def derivative_of(x, dt=1, radian=False):
-	if radian:
-		x = make_continuous_copy(x)
-
+def derivative_of(x, dt=1):
 	not_nan_mask = ~np.isnan(x)
 	masked_x = x[not_nan_mask]
 
@@ -126,10 +109,12 @@ class EthUcyObservationSite():
 		return denormalize(data, self.boundaries)
 
 class EthUcy():
-	def __init__(self, train_batch_size, test_batch_size):
+	def __init__(self, train_batch_size, test_batch_size, history, futures):
 		self.train_batch_size = train_batch_size
 		self.test_batch_size = test_batch_size
 		self.observation_sites = {}
+		self.history = history
+		self.futures = futures
 
 	@property
 	def eth_observation_site(self):
@@ -172,7 +157,7 @@ class EthUcy():
 			for agent in scene.agents:
 				agent.data = normalize(agent.data, combined_boundaries)
 
-		dataset = EthUcyDataset(scenes)
+		dataset = EthUcyDataset(scenes, self.history, self.futures)
 		return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 	def _load_data_source(self, data_source, data_class, spatial_boundaries, feature_boundaries):
