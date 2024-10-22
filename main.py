@@ -26,7 +26,7 @@ with wandb.init() as run:
 		'encoder': 'GRU',
 		'flow': 'DNF',
 		'dataset': 'EthUcy',
-		'observation_site': 'zara1',
+		'observation_site': 'hotel',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -129,7 +129,8 @@ with wandb.init() as run:
 		wandb.log({'loss': loss})
 			
 	if should_serialize:
-		model_name = 'ind_marginal.pt'
+		model_name = 'testing.pt'
+		#model_name = 'ind_marginal.pt'
 		#model_name = 'ind_joint.pt'
 		#model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
 		if should_train:

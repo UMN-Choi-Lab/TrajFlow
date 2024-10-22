@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-ethucy = EthUcy(train_batch_size=128, test_batch_size=1)
+ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12)
 observation_site = ethucy.hotel_observation_site
 #ind = InD(root="data", train_ratio=0.75, train_batch_size=64, test_batch_size=1, missing_rate=0)
 #observation_site = ind.observation_site1

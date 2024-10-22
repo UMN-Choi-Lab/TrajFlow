@@ -59,9 +59,10 @@ def evaluate_generalizability(observation_site_name, model, num_samples, device)
 				_, first_12, _ = model.sample(test_input, test_feature, 12, num_samples)
 				generalize = []
 				for sample in first_12:
-					last_8 = sample[4:, :]
-					x = last_8[:, 0].cpu().numpy()
-					y = last_8[:, 1].cpu().numpy()
+					x = sample[:, 0].cpu().numpy()
+					y = sample[:, 1].cpu().numpy()
+					#x = last_8[:, 0].cpu().numpy()
+					#y = last_8[:, 1].cpu().numpy()
 
 					dt = 0.4
 					vx = derivative_of(x, dt)
@@ -69,19 +70,20 @@ def evaluate_generalizability(observation_site_name, model, num_samples, device)
 					ax = derivative_of(vx, dt)
 					ay = derivative_of(vy, dt)
 
-					vx = torch.tensor(vx).unsqueeze(-1)
-					vy = torch.tensor(vy).unsqueeze(-1)
-					ax = torch.tensor(ax).unsqueeze(-1)
-					ay = torch.tensor(ay).unsqueeze(-1)
+					last_8 = sample[4:, :]
 
+					vx = torch.tensor(vx)[4:].unsqueeze(-1)
+					vy = torch.tensor(vy)[4:].unsqueeze(-1)
+					ax = torch.tensor(ax)[4:].unsqueeze(-1)
+					ay = torch.tensor(ay)[4:].unsqueeze(-1)
 					last_8_features = torch.cat((vx, vy, ax, ay), dim=-1)
 					last_8_features = append_time(last_8_features).to(device)
+
 					_, next_12, _ = model.sample(last_8.unsqueeze(0), last_8_features.unsqueeze(0), 12, 1)
 					generalize.append(next_12)
 
 				next_12 = torch.cat(generalize, dim=0)
 				samples = torch.cat((first_12, next_12), dim=1)
-				print(samples.shape)
 
 			test_target = torch.tensor(observation_site.denormalize(test_target.cpu().numpy())).to(device)
 			samples = torch.tensor(observation_site.denormalize(samples.cpu().numpy())).to(device)
