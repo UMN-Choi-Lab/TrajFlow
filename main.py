@@ -89,7 +89,7 @@ with wandb.init() as run:
 		hidden_dim=hidden_dim,
 		causal_encoder=causal_encoder,
 		flow=flow,
-		marginal=True).to(device)
+		marginal=False).to(device)
 	num_parameters = sum(p.numel() for p in traj_flow.parameters() if p.requires_grad)
 	wandb.log({'parameters': num_parameters})
 

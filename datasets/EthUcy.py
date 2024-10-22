@@ -45,11 +45,6 @@ class EthUcyDataset(Dataset):
 		data = []
 		for scene in self.scenes:
 			for agent in scene.agents:
-				# This idea was good but the foor loop needs to be optimized 
-				# if the trajectory is less than 20 its ignored what about 
-				# for i in range(0, self.history_frames):
-				#   history = agent_data.iloc[max(0, i - self.history_frames), min(len(agent_data) - 1, i + 1)]
-				#   future = agent_data.iloc[min(len(agent_data) - 1, i + 1), min(len(agent_data), i + 1 + self.future_frames)]
 				for i in range(self.history_frames - 1, len(agent.data) - self.future_frames):
 					history = agent.data.iloc[i-self.history_frames+1:i+1]
 					future = agent.data.iloc[i+1:i+1+self.future_frames]
@@ -75,19 +70,6 @@ class EthUcyDataset(Dataset):
 		inputs = history[input_columns].values
 		features = history[feature_columns].values
 		targets = future[input_columns].values
-		
-		# Pad with zeros if necessary... probably can remove
-		# if inputs.shape[0] < self.history_frames:
-		# 	pad_width = ((self.history_frames - inputs.shape[0], 0), (0, 0))
-		# 	inputs = np.pad(inputs, pad_width, mode='constant')
-
-		# if features.shape[0] < self.history_frames:
-		# 	pad_width = ((self.history_frames - features.shape[0], 0), (0, 0))
-		# 	features = np.pad(features, pad_width, mode='constant')
-		
-		# if targets.shape[0] < self.future_frames:
-		# 	pad_width = ((0, self.future_frames - targets.shape[0]), (0, 0))
-		# 	targets = np.pad(targets, pad_width, mode='constant')
 
 		inputs = torch.tensor(inputs, dtype=torch.float32)
 		features = torch.tensor(features, dtype=torch.float32)
@@ -140,12 +122,8 @@ class EthUcy():
 		if data_source not in self.observation_sites:
 			spatial_boundaries = np.array([[np.inf, -np.inf], [np.inf, -np.inf]])
 			feature_boundaries = np.array([[np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf]])
-			# for i in range(25):
-			# 	feature_boundaries = np.append(feature_boundaries, [[np.inf, -np.inf]], axis=0)
 			train_scenes = self._load_data_source(data_source, 'train', spatial_boundaries, feature_boundaries)
-			#train_boundaries, train_loader = self._load_data_source(data_source, 'test', self.train_batch_size)
 			test_scenes = self._load_data_source(data_source, 'test', spatial_boundaries, feature_boundaries)
-			#test_boundaries, test_loader = self._load_data_source(data_source, 'train', self.test_batch_size)
 			train_loader = self._prepare_data(train_scenes, spatial_boundaries, feature_boundaries, self.train_batch_size)
 			test_loader = self._prepare_data(test_scenes, spatial_boundaries, feature_boundaries, self.test_batch_size)
 			self.observation_sites[data_source] = EthUcyObservationSite(train_loader, test_loader, spatial_boundaries)
@@ -161,15 +139,10 @@ class EthUcy():
 		return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 	def _load_data_source(self, data_source, data_class, spatial_boundaries, feature_boundaries):
-		N = 5 # neighboorhood size
 		scenes = []
-		first = True # remove me
-		# for i in range(N * N):
-		# 	feature_boundaries = np.append(feature_boundaries, [[np.inf, -np.inf]], axis=0)
-		
 		for subdir, _, files in os.walk(os.path.join('data', 'raw', data_source, data_class)):
 			for file in files:
-				if first and file.endswith('.txt'):
+				if file.endswith('.txt'):
 					full_data_path = os.path.join(subdir, file)
 					print('At', full_data_path)
 
@@ -187,38 +160,6 @@ class EthUcy():
 					#data['pos_y'] = data['pos_y'] #- data['pos_y'].mean()
 
 					max_timesteps = data['frame_id'].max()
-
-					# This is slow we need to optimize
-					
-					# grid_size = 10
-					# cell_size = grid_size / N
-					# half_grid = grid_size // 2
-
-					# for frame_id in range(max_timesteps):
-					# 	agents = data[data['frame_id'] == frame_id]
-					# 	agent_ids = agents['node_id']
-
-					# 	for agent_id in agent_ids:
-					# 		agent_data = agents[agents['node_id'] == agent_id]
-					# 		x_pos = agent_data['pos_x'].values[0]
-					# 		y_pos = agent_data['pos_y'].values[0]
-
-					# 		counts = np.zeros((N, N))
-					# 		for i in range(N):
-					# 			for j in range(N):
-					# 				x_min = x_pos - half_grid + i * cell_size
-					# 				x_max = x_pos - half_grid + (i + 1) * cell_size
-					# 				y_min = y_pos - half_grid + j * cell_size
-					# 				y_max = y_pos - half_grid + (j + 1) * cell_size
-					# 				counts[i, j] = agents[(agents['node_id'] != agent_id) &
-					# 						(agents['pos_x'] >= x_min) & (agents['pos_x'] < x_max) &
-					# 						(agents['pos_y'] >= y_min) & (agents['pos_y'] < y_max)].shape[0]
-
-					# 		social_occupancy = counts.flatten().tolist()
-					# 		mask = (data['frame_id'] == frame_id) & (data['node_id'] == agent_id)
-
-					# 		for i in range(len(social_occupancy)):
-					# 			data.loc[mask, f'social_occupancy{i}'] = social_occupancy[i]
 
 					scene = Scene(max_timesteps)
 
@@ -272,13 +213,6 @@ class EthUcy():
 
 						headers = ['x_pos', 'y_pos', 'x_vel', 'y_vel', 'x_acc', 'y_acc']
 						data_dict = {'x_pos': x, 'y_pos': y, 'x_vel': vx, 'y_vel': vy, 'x_acc': ax, 'y_acc': ay}
-
-						# for i in range(N * N):
-						# 	social_occupancy = node_df[f'social_occupancy{i}'].values
-						# 	data_dict[f'social_occupancy{i}'] = social_occupancy
-						# 	headers.append(f'social_occupancy{i}')
-						# 	feature_boundaries[4 + i][0] = min(feature_boundaries[3 + i][0], np.min(social_occupancy))
-						# 	feature_boundaries[4 + i][1] = max(feature_boundaries[3 + i][1], np.max(social_occupancy))
 
 						node_data = pd.DataFrame(data_dict, columns=headers)
 						scene.agents.append(Agent(first_timestep, node_data))
