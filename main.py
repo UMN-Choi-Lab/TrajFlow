@@ -19,12 +19,13 @@ should_evaluate_generalizability = True
 should_visualize = False
 verbose = False
 simple_visualization = False
+marginal = True
 
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
-		'encoder': 'GRU',
-		'flow': 'DNF',
+		'encoder': 'CDE',
+		'flow': 'CNF',
 		'dataset': 'EthUcy',
 		'observation_site': 'hotel',
 		'masked_data_ratio': 0
@@ -89,7 +90,7 @@ with wandb.init() as run:
 		hidden_dim=hidden_dim,
 		causal_encoder=causal_encoder,
 		flow=flow,
-		marginal=False).to(device)
+		marginal=marginal).to(device)
 	num_parameters = sum(p.numel() for p in traj_flow.parameters() if p.requires_grad)
 	wandb.log({'parameters': num_parameters})
 
@@ -129,9 +130,9 @@ with wandb.init() as run:
 		wandb.log({'loss': loss})
 			
 	if should_serialize:
-		model_name = 'testing.pt'
+		#model_name = 'testing.pt'
 		#model_name = 'ind_marginal.pt'
-		#model_name = 'ind_joint.pt'
+		model_name = 'ind_joint.pt'
 		#model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
 		if should_train:
 			torch.save(traj_flow.state_dict(), model_name)
