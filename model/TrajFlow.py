@@ -114,7 +114,7 @@ class TrajFlow(nn.Module):
 			x_t = x[..., -1:, :].unsqueeze(dim=1).repeat(1, num_samples, 1, 1)
 			z = self._rel_to_abs(z, x_t)[0]
 			#z = self._rel_to_abs(z, x_t)[0]
-		#z = z if self.marginal else z.view(z.shape[0], self.seq_len, self.input_dim)
+		y = y if self.marginal else y.view(y.shape[0], self.seq_len, self.input_dim)
 		return y, z, delta_logpz # y might not be the correct shape for joint densities
 
 	def log_prob(self, z_t0, delta_logpz):

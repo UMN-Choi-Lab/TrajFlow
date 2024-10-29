@@ -12,11 +12,11 @@ from evaluate_generalizability import evaluate_generalizability
 from visualize import visualize
 from visualize_temp import visualize_temp
 
-should_train = True
-should_serialize = False
+should_train = False
+should_serialize = True
 should_evaluate = False
-should_evaluate_generalizability = True
-should_visualize = False
+should_evaluate_generalizability = False
+should_visualize = True
 verbose = False
 simple_visualization = False
 marginal = True
@@ -131,8 +131,8 @@ with wandb.init() as run:
 			
 	if should_serialize:
 		#model_name = 'testing.pt'
-		#model_name = 'ind_marginal.pt'
-		model_name = 'ind_joint.pt'
+		model_name = 'ind_marginal.pt'
+		#model_name = 'ind_joint.pt'
 		#model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
 		if should_train:
 			torch.save(traj_flow.state_dict(), model_name)
