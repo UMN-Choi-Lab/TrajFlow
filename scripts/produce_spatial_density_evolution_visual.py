@@ -35,19 +35,16 @@ observed_traj = np.array([[0, 0], [1, 1], [2, 0]])
 unobserved_traj = np.array([[0, 1], [1, 2], [2, 1]])
 
 legend_elements = [
-    Line2D([0], [0], color='red', lw=1, label='Observed Trajectory'),
-    Line2D([0], [0], color='lightcoral', lw=1, label='Unobserved Trajectory')
+    Line2D([0], [0], color='red', lw=4, label='Observed Trajectory'),
+    Line2D([0], [0], color='lightcoral', lw=4, label='Unobserved Trajectory')
 ]
 
-fig.legend(handles=legend_elements, fontsize=20)
+fig.legend(handles=legend_elements, prop={'size': 12})
 
 cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
 cbar = plt.colorbar(sm, cax=cbar_ax, label='Likelihood')
 cbar.set_label('Likelihood', fontsize=25)
 cbar.ax.tick_params(labelsize=20) 
 
-file_name = 'spatial_density_evolution.png'
-if os.path.exists(file_name):
-    os.remove(file_name)
-fig.savefig(file_name)
+fig.savefig('spatial_density_evolution.pdf', format='pdf')
 plt.show()
