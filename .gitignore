@@ -7,3 +7,5 @@ wandb/
 *.png
 *.pt
 *.sh
+*.pdf
+*.svg

@@ -12,11 +12,11 @@ from evaluate_generalizability import evaluate_generalizability
 from visualize import visualize
 from visualize_temp import visualize_temp
 
-should_train = False
-should_serialize = True
-should_evaluate = False
+should_train = True
+should_serialize = False
+should_evaluate = True
 should_evaluate_generalizability = False
-should_visualize = True
+should_visualize = False
 verbose = False
 simple_visualization = False
 marginal = True
@@ -26,8 +26,8 @@ with wandb.init() as run:
 		'seed': random.randint(0, 2**32 - 1),
 		'encoder': 'CDE',
 		'flow': 'CNF',
-		'dataset': 'EthUcy',
-		'observation_site': 'hotel',
+		'dataset': 'InD',
+		'observation_site': 'zara1',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -130,8 +130,8 @@ with wandb.init() as run:
 		wandb.log({'loss': loss})
 			
 	if should_serialize:
-		#model_name = 'testing.pt'
-		model_name = 'ind_marginal.pt'
+		model_name = 'v_marginal.pt'
+		#model_name = 'ind_marginal.pt'
 		#model_name = 'ind_joint.pt'
 		#model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
 		if should_train:

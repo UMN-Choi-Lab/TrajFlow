@@ -30,8 +30,8 @@ def compute_pzt1(model, input, features, grid):
         pz_t1 = []
         for grid_batch in grid.split(batch_size, dim=0):
             #grid_batch = grid_batch.unsqueeze(1).expand(-1, 100, -1)
-            #grid_batch = grid_batch.unsqueeze(1).expand(-1, 12, -1)
-            grid_batch = grid_batch.unsqueeze(1).expand(-1, 24, -1)
+            grid_batch = grid_batch.unsqueeze(1).expand(-1, 12, -1)
+            #grid_batch = grid_batch.unsqueeze(1).expand(-1, 24, -1)
             z_t0, delta_logpz = model.flow(grid_batch, embedding)
             logpz_t0, logpz_t1 = model.log_prob(z_t0, delta_logpz)
             pz_t1.append(logpz_t1.exp())
@@ -49,8 +49,8 @@ def generate_video(grid, pz_t1, prob_threshold,
     y = -grid[:, 1].reshape(steps, steps)
 
     #for t in range(100):
-    #for t in range(12):
-    for t in range(24):
+    for t in range(12):
+    #for t in range(24):
         likelihood = pz_t1[:, t].cpu().numpy().reshape(steps, steps)
         likelihood = likelihood / np.max(likelihood)
         likelihood = np.where(likelihood < prob_threshold, np.nan, likelihood)
