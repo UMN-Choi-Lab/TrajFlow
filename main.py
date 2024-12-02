@@ -24,10 +24,10 @@ marginal = True
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
-		'encoder': 'CDE',
-		'flow': 'CNF',
-		'dataset': 'InD',
-		'observation_site': 'zara1',
+		'encoder': 'GRU',
+		'flow': 'DNF',
+		'dataset': 'EthUcy',
+		'observation_site': 'hotel',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -51,7 +51,7 @@ with wandb.init() as run:
 		feature_dim = 5
 		embedding_dim = 128
 		hidden_dim = 512
-		evaulation_samples = 20#1000
+		evaulation_samples = 1000
 
 		ind = InD(
 			root="data",
@@ -64,11 +64,11 @@ with wandb.init() as run:
 		seq_len = 12
 		input_dim = 2
 		feature_dim = 4
-		embedding_dim = 128#16
-		hidden_dim = 512#32
+		embedding_dim = 128
+		hidden_dim = 512
 		evaulation_samples = 20
 
-		ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12)
+		ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, min_futures=1)
 		observation_site = (
         	ethucy.eth_observation_site if run.config.observation_site == 'eth' else
         	ethucy.hotel_observation_site if run.config.observation_site == 'hotel' else

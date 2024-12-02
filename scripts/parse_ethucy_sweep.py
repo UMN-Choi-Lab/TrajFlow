@@ -3,7 +3,11 @@ from collections import defaultdict
 
 api = wandb.Api()
 
-sweep_id = 'dyg93f39'
+
+#sweep_id = 'oa8a4ll1' # CDE-CNF
+#sweep_id = '1i8ccfmm' # GRU-DNF
+#sweep_id = 'tiol73rx' # GRU-CNF
+sweep_id = 'm8odni4w' # CDE-DNF
 sweep = api.sweep(f'mitchkos21-university-of-minnesota/trajflow_dry_run/{sweep_id}')
 
 config_counts = defaultdict(int)
@@ -43,6 +47,10 @@ for run in sweep.runs:
         inference_runtime_results[key] += inference_runtime_result
         parameters_results[key] += parameters_result
 
+average_train_runtime = 0
+average_inference_runtime = 0
+total_sites = 0
+
 for key in config_counts.keys():
     num_runs = config_counts[key]
     nll = nll_results[key] = nll_results[key] / num_runs
@@ -54,16 +62,23 @@ for key in config_counts.keys():
     inference_runtime = inference_runtime_results[key] = inference_runtime_results[key] / num_runs
     parameters = parameters_results[key] = parameters_results[key] / num_runs
 
+    average_train_runtime += train_runtime
+    average_inference_runtime += inference_runtime
+    total_sites += 1
+
     print(key)
     print(f'min ade: {min_ade}')
     print(f'min fde: {min_fde}')
     # print(f'nll: {nll}')
     # print(f'crps: {crps}')
     # print(f'rmse: {rmse}')
-    # print(f'train runtime: {train_runtime}')
-    # print(f'inference runtime: {inference_runtime}')
-    # print(f'parameters: {parameters}')
+    print(f'train runtime: {train_runtime}')
+    print(f'inference runtime: {inference_runtime}')
+    print(f'parameters: {parameters}')
     print('')
+
+print(f'average train runtime: {average_train_runtime / total_sites}')
+print(f'average inference runtime: {average_inference_runtime / total_sites}')
 
 
 # for encoder in ['GRU', 'CDE']:

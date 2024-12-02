@@ -35,20 +35,45 @@ class Agent():
 		self.data = data
 
 class EthUcyDataset(Dataset):
-	def __init__(self, scenes, history_frames=8, future_frames=12):
+	def __init__(self, scenes, history_frames=8, future_frames=12, evaluation_mode=False):
 		self.scenes = scenes
 		self.history_frames = history_frames
 		self.future_frames = future_frames
+		self.evaluation_mode = evaluation_mode
 		self.data = self._prepare_data()
 
 	def _prepare_data(self):
 		data = []
+		count = 0
+		bcount = 0
+		tcount = 0
+		scount = 0
 		for scene in self.scenes:
 			for agent in scene.agents:
-				for i in range(self.history_frames - 1, len(agent.data) - self.future_frames):
-					history = agent.data.iloc[i-self.history_frames+1:i+1]
-					future = agent.data.iloc[i+1:i+1+self.future_frames]
-					data.append((history, future))
+				count += 1
+				if len(agent.data) >= 20:
+					bcount += 1
+				if len(agent.data) >= 9:
+					tcount += 1
+				if len(agent.data) > 2:
+					scount += 1
+				if self.evaluation_mode:
+					if len(agent.data) > self.history_frames:
+						history = agent.data.iloc[0:self.history_frames]
+						future = agent.data.iloc[self.history_frames:self.history_frames+self.future_frames]
+						data.append((history, future))
+					elif len(agent.data) > 2:
+						history = agent.data.iloc[:-1]
+						future = agent.data.iloc[-1:]
+						data.append((history, future))
+				else:
+					for i in range(self.history_frames - 1, len(agent.data) - self.future_frames):
+						history = agent.data.iloc[i-self.history_frames+1:i+1]
+						future = agent.data.iloc[i+1:i+1+self.future_frames]
+						data.append((history, future))
+		print(bcount / count)
+		print(tcount / count)
+		print(scount / count)
 		return data
 	
 	def _append_time(self, features):
@@ -91,12 +116,13 @@ class EthUcyObservationSite():
 		return denormalize(data, self.boundaries)
 
 class EthUcy():
-	def __init__(self, train_batch_size, test_batch_size, history, futures):
+	def __init__(self, train_batch_size, test_batch_size, history, futures, min_futures):
 		self.train_batch_size = train_batch_size
 		self.test_batch_size = test_batch_size
 		self.observation_sites = {}
 		self.history = history
 		self.futures = futures
+		self.min_futures = min_futures
 
 	@property
 	def eth_observation_site(self):
@@ -124,18 +150,20 @@ class EthUcy():
 			feature_boundaries = np.array([[np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf]])
 			train_scenes = self._load_data_source(data_source, 'train', spatial_boundaries, feature_boundaries)
 			test_scenes = self._load_data_source(data_source, 'test', spatial_boundaries, feature_boundaries)
-			train_loader = self._prepare_data(train_scenes, spatial_boundaries, feature_boundaries, self.train_batch_size)
-			test_loader = self._prepare_data(test_scenes, spatial_boundaries, feature_boundaries, self.test_batch_size)
+			print('train')
+			train_loader = self._prepare_data(train_scenes, spatial_boundaries, feature_boundaries, self.train_batch_size, False)
+			print('test')
+			test_loader = self._prepare_data(test_scenes, spatial_boundaries, feature_boundaries, self.test_batch_size, True)
 			self.observation_sites[data_source] = EthUcyObservationSite(train_loader, test_loader, spatial_boundaries)
 		return self.observation_sites[data_source]
 	
-	def _prepare_data(self, scenes, spatial_boundaries, feature_boundaries, batch_size):
-		combined_boundaries = np.concatenate((spatial_boundaries, feature_boundaries), axis=0)
-		for scene in scenes:
-			for agent in scene.agents:
-				agent.data = normalize(agent.data, combined_boundaries)
+	def _prepare_data(self, scenes, spatial_boundaries, feature_boundaries, batch_size, evaluation_set):
+		#combined_boundaries = np.concatenate((spatial_boundaries, feature_boundaries), axis=0)
+		#for scene in scenes:
+		#	for agent in scene.agents:
+		#		agent.data = normalize(agent.data, combined_boundaries)
 
-		dataset = EthUcyDataset(scenes, self.history, self.futures)
+		dataset = EthUcyDataset(scenes, self.history, self.futures, evaluation_set)
 		return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 	def _load_data_source(self, data_source, data_class, spatial_boundaries, feature_boundaries):
@@ -197,7 +225,7 @@ class EthUcy():
 						feature_boundaries[3][0] = min(feature_boundaries[3][0], np.min(ay))
 						feature_boundaries[3][1] = max(feature_boundaries[3][1], np.max(ay))
 
-						# agents_dir = "agents"
+						# agents_dir = f"agents_{file.rstrip('.txt')}"
 						# os.makedirs(agents_dir, exist_ok=True)
 						# filename = os.path.join(agents_dir, f'agent_{len(scene.agents)}.png')
 						# if os.path.exists(filename):
@@ -207,9 +235,9 @@ class EthUcy():
 						# plt.scatter(x, y, color='red', s=50, zorder=5)
 						# plt.savefig(filename)
 						# plt.close()
-						# print(f'agent {len(scene.agents)} positions {node_values}')
-						# print(x)
-						# print(y)
+						#print(f'agent {len(scene.agents)} positions {node_values}')
+						#print(x)
+						#print(y)
 
 						headers = ['x_pos', 'y_pos', 'x_vel', 'y_vel', 'x_acc', 'y_acc']
 						data_dict = {'x_pos': x, 'y_pos': y, 'x_vel': vx, 'y_vel': vy, 'x_acc': ax, 'y_acc': ay}
