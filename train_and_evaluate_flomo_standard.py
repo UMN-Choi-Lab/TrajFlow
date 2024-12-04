@@ -13,14 +13,9 @@ def augment_trajectories(history, future, smin, smax):
     centered_history = history - mean_position
     centered_future = future - mean_position
 
-    mean = 1.0
-    std_dev = 0.5
-
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    scaling_factors = torch.normal(mean=mean, std=std_dev, size=(history.size(0), 1, 1), device=device)
+    scaling_factors = torch.normal(mean=1.0, std=0.5, size=(history.size(0), 1, 1), device=device)
     scaling_factors = torch.clamp(scaling_factors, min=smin, max=smax)
-    #print(scaling_factors.shape)
-    #print(scaling_factors)
 
     scaled_history = centered_history * scaling_factors
     scaled_future = centered_future * scaling_factors
@@ -34,9 +29,9 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #torch.manual_seed(145841768)
 
 ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, min_futures=1)
-#observation_site = ethucy.hotel_observation_site
+observation_site = ethucy.hotel_observation_site
 #observation_site = ethucy.eth_observation_site
-observation_site = ethucy.zara2_observation_site
+#observation_site = ethucy.zara2_observation_site
 flomo = FloMo(hist_size=8, pred_steps=12, alpha=10, beta=0.2, gamma=0.02, num_in=2, num_feat=0, norm_rotation=True).to(device)
 
 flomo.train()
@@ -44,7 +39,7 @@ flomo.train()
 optim = torch.optim.Adam(flomo.parameters(), lr=1e-3, weight_decay=0)
 #scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=0.999)
 
-for epoch in range(150):
+for epoch in range(25):
     losses = []
     for input, _, target in (pbar := tqdm(observation_site.train_loader)):
         input = input.to(device)

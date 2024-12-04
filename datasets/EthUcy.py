@@ -184,8 +184,8 @@ class EthUcy():
 					data['node_id'] = data['track_id'].astype(str)
 					data.sort_values('frame_id', inplace=True)
 
-					#data['pos_x'] = data['pos_x'] #- data['pos_x'].mean()
-					#data['pos_y'] = data['pos_y'] #- data['pos_y'].mean()
+					data['pos_x'] = data['pos_x'] - data['pos_x'].mean()
+					data['pos_y'] = data['pos_y'] - data['pos_y'].mean()
 
 					max_timesteps = data['frame_id'].max()
 
