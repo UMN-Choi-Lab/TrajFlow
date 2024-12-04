@@ -12,7 +12,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 num_trajectories=3
 
-eth = EthUcy(train_batch_size=128, test_batch_size=num_trajectories, history=8, futures=12, min_futures=12)
+eth = EthUcy(train_batch_size=128, test_batch_size=num_trajectories, history=8, futures=12, smin=0.3, smax=1.7)
 observation_site = eth.zara1_observation_site
 
 traj_flow = TrajFlow(

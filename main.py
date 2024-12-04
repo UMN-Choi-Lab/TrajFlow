@@ -68,7 +68,7 @@ with wandb.init() as run:
 		hidden_dim = 512
 		evaulation_samples = 20
 
-		ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, min_futures=1)
+		ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, smin=0.3, smax=1.7)
 		observation_site = (
         	ethucy.eth_observation_site if run.config.observation_site == 'eth' else
         	ethucy.hotel_observation_site if run.config.observation_site == 'hotel' else

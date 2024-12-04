@@ -12,7 +12,7 @@ from model.TrajFlow import TrajFlow, CausalEnocder, Flow
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-eth = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, min_futures=1)
+eth = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, smin=0.3, smax=1.7)
 observation_site = eth.univ_observation_site
 
 traj_flow_j = TrajFlow(

@@ -3,77 +3,39 @@ import torch
 import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
-#import matplotlib.pyplot as plt
-
-# InD uses this to.... put in shared location
-def normalize(data, boundaries):
-	return (data - boundaries[:, 0]) / (boundaries[:, 1] - boundaries[:, 0])
-
-def denormalize(data, boundaries):
-	return (data * (boundaries[:, 1] - boundaries[:, 0])) + boundaries[:, 0]
-
-def derivative_of(x, dt=1):
-	not_nan_mask = ~np.isnan(x)
-	masked_x = x[not_nan_mask]
-
-	if masked_x.shape[-1] < 2:
-		return np.zeros_like(x)
-
-	dx = np.full_like(x, np.nan)
-	dx[not_nan_mask] = np.ediff1d(masked_x, to_begin=(masked_x[1] - masked_x[0])) / dt
-
-	return dx
 
 class Scene():
-	def __init__(self, timesteps):
-		self.timesteps = timesteps
+	def __init__(self):
 		self.agents = []
 
 class Agent():
-	def __init__(self, first_timestep, data):
-		self.first_timestep = first_timestep
-		self.data = data
+	def __init__(self, trajectory):
+		self.trajectory = trajectory
 
 class EthUcyDataset(Dataset):
-	def __init__(self, scenes, history_frames=8, future_frames=12, evaluation_mode=False):
+	def __init__(self, scenes, history_frames=8, future_frames=12, smin=0.3, smax=1.7, evaluation_mode=False):
 		self.scenes = scenes
 		self.history_frames = history_frames
 		self.future_frames = future_frames
+		self.smin = smin
+		self.smax = smax
 		self.evaluation_mode = evaluation_mode
 		self.data = self._prepare_data()
 
 	def _prepare_data(self):
 		data = []
-		count = 0
-		bcount = 0
-		tcount = 0
-		scount = 0
 		for scene in self.scenes:
 			for agent in scene.agents:
-				count += 1
-				if len(agent.data) >= 20:
-					bcount += 1
-				if len(agent.data) >= 9:
-					tcount += 1
-				if len(agent.data) > 2:
-					scount += 1
 				if self.evaluation_mode:
-					if len(agent.data) >= self.history_frames + 2:
-						history = agent.data.iloc[0:self.history_frames]
-						future = agent.data.iloc[self.history_frames:self.history_frames+self.future_frames]
+					if len(agent.trajectory) >= self.history_frames + 2:
+						history = agent.trajectory[0:self.history_frames]
+						future = agent.trajectory[self.history_frames:self.history_frames+self.future_frames]
 						data.append((history, future))
-					# elif len(agent.data) > 2:
-					# 	history = agent.data.iloc[:-1]
-					# 	future = agent.data.iloc[-1:]
-					# 	data.append((history, future))
 				else:
-					for i in range(self.history_frames - 1, len(agent.data) - self.future_frames):
-						history = agent.data.iloc[i-self.history_frames+1:i+1]
-						future = agent.data.iloc[i+1:i+1+self.future_frames]
+					for i in range(self.history_frames - 1, len(agent.trajectory) - self.future_frames):
+						history = agent.trajectory[i-self.history_frames+1:i+1]
+						future = agent.trajectory[i+1:i+1+self.future_frames]
 						data.append((history, future))
-		print(bcount / count)
-		print(tcount / count)
-		print(scount / count)
 		return data
 	
 	def _append_time(self, features):
@@ -82,47 +44,77 @@ class EthUcyDataset(Dataset):
 		t = t.unsqueeze(-1)
 		t = t.expand(seq_len, 1)
 		return torch.cat([features, t], dim=-1)
+	
+	def _augment_trajectories(self, history, future):
+		full_trajectory = torch.cat([history, future], dim=0)
+		mean_position = full_trajectory.mean(dim=0, keepdim=True)
+
+		centered_history = history - mean_position
+		centered_future = future - mean_position
+
+		scaling_factors = torch.normal(mean=1.0, std=0.5, size=(1, 1))
+		scaling_factors = torch.clamp(scaling_factors, min=self.smin, max=self.smax)
+
+		scaled_history = centered_history * scaling_factors
+		scaled_future = centered_future * scaling_factors
+
+		augmented_history = scaled_history + mean_position
+		augmented_future = scaled_future + mean_position
+
+		return augmented_history, augmented_future
+	
+	def _derivative_of(self, x, dt=1):
+		not_nan_mask = ~torch.isnan(x)
+		masked_x = x[not_nan_mask]
+
+		if masked_x.numel() < 2:
+			return torch.zeros_like(x)
+
+		dx = torch.full_like(x, float('nan'))
+		dx[not_nan_mask] = torch.cat([torch.tensor([masked_x[1] - masked_x[0]]), torch.diff(masked_x)]) / dt
+
+		return dx
 
 	def __len__(self):
 		return len(self.data)
 
 	def __getitem__(self, idx):
 		history, future = self.data[idx]
+		if not self.evaluation_mode:
+			history, future = self._augment_trajectories(history, future)
 
-		input_columns = ['x_pos', 'y_pos']
-		feature_columns = [col for col in history.columns if col not in input_columns]
+		dt = 0.4
+		x = history[:, 0]
+		y = history[:, 1]
+		vx = self._derivative_of(x, dt)
+		vy = self._derivative_of(y, dt)
+		ax = self._derivative_of(vx, dt)
+		ay = self._derivative_of(vy, dt)
 
-		inputs = history[input_columns].values
-		features = history[feature_columns].values
-		targets = future[input_columns].values
+		features = torch.stack((vx, vy, ax, ay), dim=1)
 
-		inputs = torch.tensor(inputs, dtype=torch.float32)
-		features = torch.tensor(features, dtype=torch.float32)
-		features = self._append_time(features)
-		targets = torch.tensor(targets, dtype=torch.float32)
-
-		return inputs, features, targets
+		return history, features, future
 	
 class EthUcyObservationSite():
-	def __init__(self, train_loader, test_loader, boundaries):
+	def __init__(self, train_loader, test_loader):
 		self.train_loader = train_loader
 		self.test_loader = test_loader
-		self.boundaries = boundaries
 
-	def normalize(self, data):
-		return normalize(data, self.boundaries)
+	def normalize(self, data): # for compatability with inD
+		return data
 	
-	def denormalize(self, data):
-		return denormalize(data, self.boundaries)
+	def denormalize(self, data): # for compatability with inD
+		return data
 
 class EthUcy():
-	def __init__(self, train_batch_size, test_batch_size, history, futures, min_futures):
+	def __init__(self, train_batch_size, test_batch_size, history, futures, smin, smax):
 		self.train_batch_size = train_batch_size
 		self.test_batch_size = test_batch_size
 		self.observation_sites = {}
 		self.history = history
 		self.futures = futures
-		self.min_futures = min_futures
+		self.smin = smin
+		self.smax = smax
 
 	@property
 	def eth_observation_site(self):
@@ -146,27 +138,18 @@ class EthUcy():
 	
 	def _get_observation_site(self, data_source):
 		if data_source not in self.observation_sites:
-			spatial_boundaries = np.array([[np.inf, -np.inf], [np.inf, -np.inf]])
-			feature_boundaries = np.array([[np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf], [np.inf, -np.inf]])
-			train_scenes = self._load_data_source(data_source, 'train', spatial_boundaries, feature_boundaries)
-			test_scenes = self._load_data_source(data_source, 'test', spatial_boundaries, feature_boundaries)
-			print('train')
-			train_loader = self._prepare_data(train_scenes, spatial_boundaries, feature_boundaries, self.train_batch_size, False)
-			print('test')
-			test_loader = self._prepare_data(test_scenes, spatial_boundaries, feature_boundaries, self.test_batch_size, True)
-			self.observation_sites[data_source] = EthUcyObservationSite(train_loader, test_loader, spatial_boundaries)
+			train_scenes = self._load_data_source(data_source, 'train')
+			test_scenes = self._load_data_source(data_source, 'test')
+			train_loader = self._prepare_data(train_scenes, self.train_batch_size, False)
+			test_loader = self._prepare_data(test_scenes, self.test_batch_size, True)
+			self.observation_sites[data_source] = EthUcyObservationSite(train_loader, test_loader)
 		return self.observation_sites[data_source]
 	
-	def _prepare_data(self, scenes, spatial_boundaries, feature_boundaries, batch_size, evaluation_set):
-		#combined_boundaries = np.concatenate((spatial_boundaries, feature_boundaries), axis=0)
-		#for scene in scenes:
-		#	for agent in scene.agents:
-		#		agent.data = normalize(agent.data, combined_boundaries)
-
-		dataset = EthUcyDataset(scenes, self.history, self.futures, evaluation_set)
+	def _prepare_data(self, scenes, batch_size, evaluation_set):
+		dataset = EthUcyDataset(scenes, self.history, self.futures, self.smin, self.smax, evaluation_set)
 		return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-	def _load_data_source(self, data_source, data_class, spatial_boundaries, feature_boundaries):
+	def _load_data_source(self, data_source, data_class):
 		scenes = []
 		for subdir, _, files in os.walk(os.path.join('data', 'raw', data_source, data_class)):
 			for file in files:
@@ -187,9 +170,7 @@ class EthUcy():
 					data['pos_x'] = data['pos_x'] - data['pos_x'].mean()
 					data['pos_y'] = data['pos_y'] - data['pos_y'].mean()
 
-					max_timesteps = data['frame_id'].max()
-
-					scene = Scene(max_timesteps)
+					scene = Scene()
 
 					for node_id in pd.unique(data['node_id']):
 						node_df = data[data['node_id'] == node_id]
@@ -197,53 +178,16 @@ class EthUcy():
 
 						node_values = node_df[['pos_x', 'pos_y']].values
 
-						first_timestep = node_df['frame_id'].iloc[0]
-
 						if node_values.shape[0] < 2:
 							continue
 
 						x = node_values[:, 0]
 						y = node_values[:, 1]
 
-						dt = 0.4
-						vx = derivative_of(x, dt)
-						vy = derivative_of(y, dt)
-						ax = derivative_of(vx, dt)
-						ay = derivative_of(vy, dt)
-
-						spatial_boundaries[0][0] = min(spatial_boundaries[0][0], np.min(x))
-						spatial_boundaries[0][1] = max(spatial_boundaries[0][1], np.max(x))
-						spatial_boundaries[1][0] = min(spatial_boundaries[1][0], np.min(y))
-						spatial_boundaries[1][1] = max(spatial_boundaries[1][1], np.max(y))
-
-						feature_boundaries[0][0] = min(feature_boundaries[0][0], np.min(vx))
-						feature_boundaries[0][1] = max(feature_boundaries[0][1], np.max(vx))
-						feature_boundaries[1][0] = min(feature_boundaries[1][0], np.min(vy))
-						feature_boundaries[1][1] = max(feature_boundaries[1][1], np.max(vy))
-						feature_boundaries[2][0] = min(feature_boundaries[2][0], np.min(ax))
-						feature_boundaries[2][1] = max(feature_boundaries[2][1], np.max(ax))
-						feature_boundaries[3][0] = min(feature_boundaries[3][0], np.min(ay))
-						feature_boundaries[3][1] = max(feature_boundaries[3][1], np.max(ay))
-
-						# agents_dir = f"agents_{file.rstrip('.txt')}"
-						# os.makedirs(agents_dir, exist_ok=True)
-						# filename = os.path.join(agents_dir, f'agent_{len(scene.agents)}.png')
-						# if os.path.exists(filename):
-						# 	os.remove(filename)
-						# plt.figure(figsize=(10, 8))
-						# plt.plot(x, y, color='black', linewidth=2, label='Agent Trajectory')
-						# plt.scatter(x, y, color='red', s=50, zorder=5)
-						# plt.savefig(filename)
-						# plt.close()
-						#print(f'agent {len(scene.agents)} positions {node_values}')
-						#print(x)
-						#print(y)
-
-						headers = ['x_pos', 'y_pos', 'x_vel', 'y_vel', 'x_acc', 'y_acc']
-						data_dict = {'x_pos': x, 'y_pos': y, 'x_vel': vx, 'y_vel': vy, 'x_acc': ax, 'y_acc': ay}
-
-						node_data = pd.DataFrame(data_dict, columns=headers)
-						scene.agents.append(Agent(first_timestep, node_data))
+						x_tensor = torch.from_numpy(x).float()
+						y_tensor = torch.from_numpy(y).float()
+						trajectory = torch.stack((x_tensor, y_tensor), dim=1)
+						scene.agents.append(Agent(trajectory))
 					
 					scenes.append(scene)
 

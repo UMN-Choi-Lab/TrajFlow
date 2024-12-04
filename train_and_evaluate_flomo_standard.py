@@ -6,31 +6,14 @@ from datasets.InD import InD
 from model.FloMo import FloMo
 from tqdm import tqdm
 
-def augment_trajectories(history, future, smin, smax):
-    full_trajectory = torch.cat([history, future], dim=1)
-    mean_position = full_trajectory.mean(dim=1, keepdim=True)
-
-    centered_history = history - mean_position
-    centered_future = future - mean_position
-
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    scaling_factors = torch.normal(mean=1.0, std=0.5, size=(history.size(0), 1, 1), device=device)
-    scaling_factors = torch.clamp(scaling_factors, min=smin, max=smax)
-
-    scaled_history = centered_history * scaling_factors
-    scaled_future = centered_future * scaling_factors
-
-    augmented_history = scaled_history + mean_position
-    augmented_future = scaled_future + mean_position
-
-    return augmented_history, augmented_future
-
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #torch.manual_seed(145841768)
 
-ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, min_futures=1)
-observation_site = ethucy.hotel_observation_site
+ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, smin=0.3, smax=1.7)
 #observation_site = ethucy.eth_observation_site
+observation_site = ethucy.hotel_observation_site
+#observation_site = ethucy.univ_observation_site
+#observation_site = ethucy.zata1_observation_site
 #observation_site = ethucy.zara2_observation_site
 flomo = FloMo(hist_size=8, pred_steps=12, alpha=10, beta=0.2, gamma=0.02, num_in=2, num_feat=0, norm_rotation=True).to(device)
 
@@ -44,7 +27,6 @@ for epoch in range(25):
     for input, _, target in (pbar := tqdm(observation_site.train_loader)):
         input = input.to(device)
         target = target.to(device)
-        input, target = augment_trajectories(input, target, 0.3, 1.7)
 
         log_prob = flomo.log_prob(target, input)
         loss = -torch.mean(log_prob)
@@ -101,9 +83,6 @@ with torch.no_grad():
     min_fde_sum = 0
     count = 0
 
-    tcount = 0
-    ttcount = 0
-
     for test_input, test_feature, test_target in observation_site.test_loader:
         test_input = test_input.to(device)
         test_feature = test_feature.to(device)
@@ -112,8 +91,6 @@ with torch.no_grad():
         # NLL same as training loss
         #log_prob = flomo.log_prob(test_target, test_input)
         #nll_sum += -torch.mean(log_prob)
-
-        print(test_target.shape)
 
         # sample based evaluation
         samples, _ = flomo.sample(20, test_input)
@@ -127,16 +104,8 @@ with torch.no_grad():
         min_fde_sum += min_fde(test_target, samples)
         count += 1
 
-        if test_target.shape[1] < 12:
-            tcount += 1
-        else:
-            ttcount += 1
-
     print(f'rmse: {rmse_sum / count}')
     print(f'crps: {crps_sum / count}')
     print(f'min ade: {min_ade_sum / count}')
     print(f'min fde: {min_fde_sum / count}')
     #print(f'nll: {nll_sum / count}')
-
-    print(tcount / count)
-    print(ttcount / count)
