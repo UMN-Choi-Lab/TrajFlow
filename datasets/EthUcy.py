@@ -58,14 +58,14 @@ class EthUcyDataset(Dataset):
 				if len(agent.data) > 2:
 					scount += 1
 				if self.evaluation_mode:
-					if len(agent.data) > self.history_frames:
+					if len(agent.data) >= self.history_frames + 2:
 						history = agent.data.iloc[0:self.history_frames]
 						future = agent.data.iloc[self.history_frames:self.history_frames+self.future_frames]
 						data.append((history, future))
-					elif len(agent.data) > 2:
-						history = agent.data.iloc[:-1]
-						future = agent.data.iloc[-1:]
-						data.append((history, future))
+					# elif len(agent.data) > 2:
+					# 	history = agent.data.iloc[:-1]
+					# 	future = agent.data.iloc[-1:]
+					# 	data.append((history, future))
 				else:
 					for i in range(self.history_frames - 1, len(agent.data) - self.future_frames):
 						history = agent.data.iloc[i-self.history_frames+1:i+1]
