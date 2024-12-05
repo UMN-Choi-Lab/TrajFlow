@@ -20,28 +20,28 @@ flomo = FloMo(hist_size=8, pred_steps=12, alpha=10, beta=0.2, gamma=0.02, num_in
 flomo.train()
 
 optim = torch.optim.Adam(flomo.parameters(), lr=1e-3, weight_decay=0)
-#scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=0.999)
+scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=0.999)
 
-for epoch in range(25):
-    losses = []
-    for input, _, target in (pbar := tqdm(observation_site.train_loader)):
-        input = input.to(device)
-        target = target.to(device)
+# for epoch in range(25):
+#     losses = []
+#     for input, _, target in (pbar := tqdm(observation_site.train_loader)):
+#         input = input.to(device)
+#         target = target.to(device)
 
-        log_prob = flomo.log_prob(target, input)
-        loss = -torch.mean(log_prob)
+#         log_prob = flomo.log_prob(target, input)
+#         loss = -torch.mean(log_prob)
             
-        optim.zero_grad()
-        loss.backward()
-        optim.step()
-        #scheduler.step()
+#         optim.zero_grad()
+#         loss.backward()
+#         optim.step()
+#         scheduler.step()
             
-        losses.append(loss)
+#         losses.append(loss)
 
-        pbar.set_description(f'Epoch {epoch} Loss {loss.item():.4f}')
+#         pbar.set_description(f'Epoch {epoch} Loss {loss.item():.4f}')
 
-    losses = torch.stack(losses)
-    pbar.set_description(f'Epoch {epoch} Loss {torch.mean(losses):.4f}')
+#     losses = torch.stack(losses)
+#     pbar.set_description(f'Epoch {epoch} Loss {torch.mean(losses):.4f}')
 
 def rmse(y_true, y_pred):
     mse = F.mse_loss(y_true.expand_as(y_pred), y_pred, reduction="mean")

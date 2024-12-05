@@ -49,24 +49,19 @@ class TrajFlow(nn.Module):
 		self.marginal = marginal
 		self.seq_len = seq_len
 		self.input_dim = input_dim
-		self.alpha = 10
+
+		# TODO: need to pass this in for inD
+		self.alpha = 1#10
+		self.beta = 0.2
+		self.gamma = 0.02
+		self.norm_rotation = True
 
 		flow_input_dim = input_dim if marginal else seq_len * input_dim
 
 		self.causal_encoder = construct_causal_enocder(input_dim + feature_dim, embedding_dim, 4, causal_encoder)
 		self.flow = construct_flow(flow_input_dim, embedding_dim, hidden_dim, flow, marginal)
-
-		#if marginal:
-		#	self.register_buffer("base_dist_mean", torch.zeros(seq_len, input_dim))
-		#	self.register_buffer("base_dist_var", torch.ones(seq_len, input_dim))
-		#else:
-		#	self.register_buffer("base_dist_mean", torch.zeros(seq_len * input_dim))
-		#	self.register_buffer("base_dist_var", torch.ones(seq_len * input_dim))
-
-	#@property
-	def _base_dist(self, mean, variance):
-		return torch.distributions.MultivariateNormal(self.base_dist_mean, torch.diag_embed(self.base_dist_var))
 	
+	# TODO: from flomo make sure the names match up
 	def _abs_to_rel(self, y, x_t):
 		y_rel = y - x_t
 		y_rel[:,1:] = (y_rel[:,1:] - y_rel[:,:-1])
@@ -76,8 +71,34 @@ class TrajFlow(nn.Module):
 	def _rel_to_abs(self, y_rel, x_t):
 		y_abs = y_rel / self.alpha
 		return torch.cumsum(y_abs, dim=-2) + x_t 
+	
+	def _rotate(self, x, x_t, angles_rad):
+		c, s = torch.cos(angles_rad), torch.sin(angles_rad)
+		c, s = c.unsqueeze(1), s.unsqueeze(1)
+		x_center = x - x_t  # translate
+		x_vals, y_vals = x_center[:, :, 0], x_center[:, :, 1]
+		new_x_vals = c * x_vals + (-1 * s) * y_vals  # _rotate x
+		new_y_vals = s * x_vals + c * y_vals  # _rotate y
+		x_center[:, :, 0] = new_x_vals
+		x_center[:, :, 1] = new_y_vals
+		return x_center + x_t  # translate back
 
-	def _embedding(self, x, feat):
+	def _normalize_rotation(self, x, y_true=None):
+		x_t = x[:, -1:, :]
+		# compute rotation angle, such that last timestep aligned with (1,0)
+		x_t_rel = x[:, -1] - x[:, -2]
+		rot_angles_rad = -1 * torch.atan2(x_t_rel[:, 1], x_t_rel[:, 0])
+		x = self._rotate(x, x_t, rot_angles_rad)
+
+		if y_true != None:
+			y_true = self._rotate(y_true, x_t, rot_angles_rad)
+			return x, y_true, rot_angles_rad  # inverse
+
+		return x, rot_angles_rad  # forward pass
+	# end TODO
+
+	# TODO: flomo does something with x here need to understand that
+	def _embedding(self, x, feat): 
 		_, seq_length, _ = x.shape
 		x = torch.cat([x, feat], dim=-1)
 		t = torch.linspace(0., 2., 2 * seq_length).to(x)
@@ -86,46 +107,57 @@ class TrajFlow(nn.Module):
 		return embedding
 
 	def forward(self, x, y, feat):
+		if self.norm_rotation:
+			x, y, _ = self._normalize_rotation(x, y)
+
 		if not self.marginal:
 			x_t = x[...,-1:,:]
 			y = self._abs_to_rel(y, x_t)
+
 		batch, seq_len, input_dim = y.shape
 		y = y if self.marginal else y.view(batch, seq_len * input_dim)
+		
 		embedding = self._embedding(x, feat)
 		z, delta_logpz = self.flow(y, embedding)
+		
 		z = z if self.marginal else z.view(batch, seq_len, input_dim)
 		return z, delta_logpz
 	
 	def sample(self, x, feat, futures, num_samples=1):
-		# kinda jank.... maybe we should clean up
+		if self.norm_rotation:
+			x, angle = self._normalize_rotation(x)
+
 		mean = (torch.zeros(futures, self.input_dim) if self.marginal else torch.zeros(self.seq_len * self.input_dim)).to(x.device)
 		variance = (torch.ones(futures, self.input_dim) if self.marginal else torch.ones(self.seq_len * self.input_dim)).to(x.device)
 		base_dist = torch.distributions.MultivariateNormal(mean, torch.diag_embed(variance))
-		#y = torch.stack([self._base_dist.sample().to(x.device) for _ in range(num_samples)])
+
 		y = torch.stack([base_dist.sample().to(x.device) for _ in range(num_samples)])
 		embedding = self._embedding(x, feat)
 		embedding = embedding.expand(y.shape[0], embedding.shape[1])
 		z, delta_logpz = self.flow(y, embedding, reverse=True)
+
 		if not self.marginal:
 			output_shape = (x.size(0), num_samples, self.seq_len, 2)
 			z = z.view(*output_shape)
-			x_t = x[...,-1:,:]
-			#x_t = x_t[0].repeat(1, self.seq_len).unsqueeze(0)
 			x_t = x[..., -1:, :].unsqueeze(dim=1).repeat(1, num_samples, 1, 1)
 			z = self._rel_to_abs(z, x_t)[0]
-			#z = self._rel_to_abs(z, x_t)[0]
+
+		if self.norm_rotation:
+			x_t = x[..., -1, :]
+			z = self._rotate(z, x_t[0], -1 * angle)
+		
 		y = y if self.marginal else y.view(y.shape[0], self.seq_len, self.input_dim)
-		return y, z, delta_logpz # y might not be the correct shape for joint densities
+		z = z if self.marginal else z[:, :futures, :]
+		return y, z, delta_logpz
 
 	def log_prob(self, z_t0, delta_logpz):
 		batch, seq_len, input_dim = z_t0.shape
 		z_t0 = z_t0 if self.marginal else z_t0.view(batch, seq_len * input_dim)
-		#logpz_t0 = self._base_dist.log_prob(z_t0)
-		#begin experimental
+
 		mean = (torch.zeros(seq_len, input_dim) if self.marginal else torch.zeros(seq_len * input_dim)).to(z_t0.device)
 		variance = (torch.ones(seq_len, input_dim) if self.marginal else torch.ones(seq_len * input_dim)).to(z_t0.device)
 		base_dist = torch.distributions.MultivariateNormal(mean, torch.diag_embed(variance))
 		logpz_t0 = base_dist.log_prob(z_t0)
-		#end experimental
+
 		logpz_t1 = logpz_t0 - delta_logpz
 		return logpz_t0, logpz_t1

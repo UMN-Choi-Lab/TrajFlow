@@ -92,6 +92,7 @@ class EthUcyDataset(Dataset):
 		ay = self._derivative_of(vy, dt)
 
 		features = torch.stack((vx, vy, ax, ay), dim=1)
+		features = self._append_time(features)
 
 		return history, features, future
 	

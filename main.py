@@ -19,7 +19,7 @@ should_evaluate_generalizability = False
 should_visualize = False
 verbose = False
 simple_visualization = False
-marginal = True
+marginal = False
 
 with wandb.init() as run:
 	run.config.setdefaults({
