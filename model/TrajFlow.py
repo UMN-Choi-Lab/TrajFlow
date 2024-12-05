@@ -54,7 +54,7 @@ class TrajFlow(nn.Module):
 		self.hidden_dim = hidden_dim
 
 		# TODO: need to pass this in for inD
-		self.alpha = 10
+		self.alpha = 1#0
 		self.beta = 0.2
 		self.gamma = 0.02
 		self.norm_rotation = True
@@ -138,7 +138,7 @@ class TrajFlow(nn.Module):
 		batch, seq_len, input_dim = y.shape
 		y = y if self.marginal else y.view(batch, seq_len * input_dim)
 
-		if self.training:
+		if False and self.training:
 			zero_mask = torch.abs(y) < 1e-2
 			noise_beta = torch.randn_like(y) * self.beta
 			noise_gamma = torch.randn_like(y) * self.gamma
