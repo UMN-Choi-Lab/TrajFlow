@@ -49,9 +49,12 @@ class TrajFlow(nn.Module):
 		self.marginal = marginal
 		self.seq_len = seq_len
 		self.input_dim = input_dim
+		self.feature_dim = feature_dim
+		self.embedding_dim = embedding_dim
+		self.hidden_dim = hidden_dim
 
 		# TODO: need to pass this in for inD
-		self.alpha = 1#10
+		self.alpha = 10
 		self.beta = 0.2
 		self.gamma = 0.02
 		self.norm_rotation = True
@@ -82,6 +85,22 @@ class TrajFlow(nn.Module):
 		x_center[:, :, 0] = new_x_vals
 		x_center[:, :, 1] = new_y_vals
 		return x_center + x_t  # translate back
+	
+	def _rotate_features(self, features, angles_rad):
+		c, s = torch.cos(angles_rad), torch.sin(angles_rad)
+		c, s = c.unsqueeze(1), s.unsqueeze(1)
+		vx_vals, vy_vals = features[:, :, 0], features[:, :, 1]
+		ax_vals, ay_vals = features[:, :, 2], features[:, :, 3]
+		# what about headings?
+		new_vx_vals = c * vx_vals + (-1 * s) * vy_vals
+		new_vy_vals = s * vx_vals + c * vy_vals
+		new_ax_vals = c * ax_vals + (-1 * s) * ay_vals
+		new_ay_vals = s * ax_vals + c * ay_vals
+		features[:, :, 0] = new_vx_vals
+		features[:, :, 1] = new_vy_vals
+		features[:, :, 2] = new_ax_vals
+		features[:, :, 3] = new_ay_vals
+		return features
 
 	def _normalize_rotation(self, x, y_true=None):
 		x_t = x[:, -1:, :]
@@ -108,7 +127,9 @@ class TrajFlow(nn.Module):
 
 	def forward(self, x, y, feat):
 		if self.norm_rotation:
-			x, y, _ = self._normalize_rotation(x, y)
+			# TODO: I think we need to roate the features as well if we are going to use them (except for time)
+			x, y, angle = self._normalize_rotation(x, y)
+			feat = self._rotate_features(feat, angle)
 
 		if not self.marginal:
 			x_t = x[...,-1:,:]
@@ -116,6 +137,12 @@ class TrajFlow(nn.Module):
 
 		batch, seq_len, input_dim = y.shape
 		y = y if self.marginal else y.view(batch, seq_len * input_dim)
+
+		if self.training:
+			zero_mask = torch.abs(y) < 1e-2
+			noise_beta = torch.randn_like(y) * self.beta
+			noise_gamma = torch.randn_like(y) * self.gamma
+			y = y + (zero_mask * noise_beta) + (~zero_mask * noise_gamma)
 		
 		embedding = self._embedding(x, feat)
 		z, delta_logpz = self.flow(y, embedding)
@@ -126,6 +153,7 @@ class TrajFlow(nn.Module):
 	def sample(self, x, feat, futures, num_samples=1):
 		if self.norm_rotation:
 			x, angle = self._normalize_rotation(x)
+			feat = self._rotate_features(feat, angle)
 
 		mean = (torch.zeros(futures, self.input_dim) if self.marginal else torch.zeros(self.seq_len * self.input_dim)).to(x.device)
 		variance = (torch.ones(futures, self.input_dim) if self.marginal else torch.ones(self.seq_len * self.input_dim)).to(x.device)
@@ -143,8 +171,8 @@ class TrajFlow(nn.Module):
 			z = self._rel_to_abs(z, x_t)[0]
 
 		if self.norm_rotation:
-			x_t = x[..., -1, :]
-			z = self._rotate(z, x_t[0], -1 * angle)
+			x_t = x[..., -1:, :]
+			z = self._rotate(z, x_t, -1 * angle)
 		
 		y = y if self.marginal else y.view(y.shape[0], self.seq_len, self.input_dim)
 		z = z if self.marginal else z[:, :futures, :]

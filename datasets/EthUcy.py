@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 
+# TODO: scene and agent are probably no longer needed
 class Scene():
 	def __init__(self):
 		self.agents = []

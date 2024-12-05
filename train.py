@@ -6,7 +6,7 @@ def train(observation_site, model, epochs, lr, weight_decay, gamma, verbose, dev
     model.train()
 
     optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=gamma)
+    #scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=gamma)
     
     total_loss = []
     for epoch in range(epochs):
@@ -27,7 +27,7 @@ def train(observation_site, model, epochs, lr, weight_decay, gamma, verbose, dev
             optim.zero_grad()
             loss.backward()
             optim.step()
-            scheduler.step()
+            #scheduler.step()
             
             if verbose:
                 total_loss.append(loss.item())
