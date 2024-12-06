@@ -19,7 +19,7 @@ should_evaluate_generalizability = False
 should_visualize = False
 verbose = False
 simple_visualization = False
-marginal = False
+marginal = True
 
 with wandb.init() as run:
 	run.config.setdefaults({
@@ -27,7 +27,7 @@ with wandb.init() as run:
 		'encoder': 'GRU',
 		'flow': 'DNF',
 		'dataset': 'EthUcy',
-		'observation_site': 'hotel',
+		'observation_site': 'zara2',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -119,7 +119,7 @@ with wandb.init() as run:
 	input = input.to(device)
 	feature = feature.to(device)
 	inference_start_time = time.time()
-	traj_flow.sample(input, feature, 100)
+	traj_flow.sample(input, feature, 12, 100)
 	inference_end_time = time.time()
 	inference_runtime = inference_end_time - inference_start_time
 	if verbose:

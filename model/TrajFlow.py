@@ -44,21 +44,18 @@ def construct_flow(input_dim, condition_dim, hidden_dim, flow, marginal):
 
 
 class TrajFlow(nn.Module):
-	def __init__(self, seq_len, input_dim, feature_dim, embedding_dim, hidden_dim, causal_encoder, flow, marginal=False):
+	def __init__(self, 
+			  seq_len, input_dim, feature_dim, embedding_dim, hidden_dim, 
+			  causal_encoder, flow, marginal=False, norm_rotation=True):
 		super(TrajFlow, self).__init__()
-		self.marginal = marginal
 		self.seq_len = seq_len
 		self.input_dim = input_dim
 		self.feature_dim = feature_dim
 		self.embedding_dim = embedding_dim
 		self.hidden_dim = hidden_dim
 
-		# TODO: need to pass this in for inD
-		self.alpha = 1#0
-		self.beta = 0.2
-		self.gamma = 0.02
-		self.norm_rotation = True
-
+		self.marginal = marginal
+		self.norm_rotation = norm_rotation
 		flow_input_dim = input_dim if marginal else seq_len * input_dim
 
 		self.causal_encoder = construct_causal_enocder(input_dim + feature_dim, embedding_dim, 4, causal_encoder)
@@ -68,12 +65,11 @@ class TrajFlow(nn.Module):
 	def _abs_to_rel(self, y, x_t):
 		y_rel = y - x_t
 		y_rel[:,1:] = (y_rel[:,1:] - y_rel[:,:-1])
-		y_rel = y_rel * self.alpha
 		return y_rel
 
 	def _rel_to_abs(self, y_rel, x_t):
-		y_abs = y_rel / self.alpha
-		return torch.cumsum(y_abs, dim=-2) + x_t 
+		y_abs = torch.cumsum(y_rel, dim=-2) + x_t 
+		return y_abs
 	
 	def _rotate(self, x, x_t, angles_rad):
 		c, s = torch.cos(angles_rad), torch.sin(angles_rad)
@@ -137,12 +133,6 @@ class TrajFlow(nn.Module):
 
 		batch, seq_len, input_dim = y.shape
 		y = y if self.marginal else y.view(batch, seq_len * input_dim)
-
-		if False and self.training:
-			zero_mask = torch.abs(y) < 1e-2
-			noise_beta = torch.randn_like(y) * self.beta
-			noise_gamma = torch.randn_like(y) * self.gamma
-			y = y + (zero_mask * noise_beta) + (~zero_mask * noise_gamma)
 		
 		embedding = self._embedding(x, feat)
 		z, delta_logpz = self.flow(y, embedding)
@@ -155,8 +145,8 @@ class TrajFlow(nn.Module):
 			x, angle = self._normalize_rotation(x)
 			feat = self._rotate_features(feat, angle)
 
-		mean = (torch.zeros(futures, self.input_dim) if self.marginal else torch.zeros(self.seq_len * self.input_dim)).to(x.device)
-		variance = (torch.ones(futures, self.input_dim) if self.marginal else torch.ones(self.seq_len * self.input_dim)).to(x.device)
+		mean = (torch.zeros(self.seq_len, self.input_dim) if self.marginal else torch.zeros(self.seq_len * self.input_dim)).to(x.device)
+		variance = (torch.ones(self.seq_len, self.input_dim) if self.marginal else torch.ones(self.seq_len * self.input_dim)).to(x.device)
 		base_dist = torch.distributions.MultivariateNormal(mean, torch.diag_embed(variance))
 
 		y = torch.stack([base_dist.sample().to(x.device) for _ in range(num_samples)])
@@ -175,7 +165,7 @@ class TrajFlow(nn.Module):
 			z = self._rotate(z, x_t, -1 * angle)
 		
 		y = y if self.marginal else y.view(y.shape[0], self.seq_len, self.input_dim)
-		z = z if self.marginal else z[:, :futures, :]
+		z = z[:, :futures, :]
 		return y, z, delta_logpz
 
 	def log_prob(self, z_t0, delta_logpz):
