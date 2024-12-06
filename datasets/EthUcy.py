@@ -23,28 +23,20 @@ class EthUcyDataset(Dataset):
 		self.evaluation_mode = evaluation_mode
 		self.data = self._prepare_data()
 
-	def _subtract_mean(self, history, future):
-		combined = torch.cat((history, future), dim=0)
-		combined_mean = combined.mean(dim=0)
-		history = history - combined_mean
-		future = future - combined_mean
-		return history, future
-
 	def _prepare_data(self):
 		data = []
 		for scene in self.scenes:
 			for agent in scene.agents:
-				if self.evaluation_mode:
-					if len(agent.trajectory) >= self.history_frames + 2:
-						history = agent.trajectory[0:self.history_frames]
-						future = agent.trajectory[self.history_frames:self.history_frames+self.future_frames]
-						#history, future = self._subtract_mean(history, future)
-						data.append((history, future))
+				sufficiently_large = len(agent.trajectory) >= self.history_frames + 2
+				sufficiently_small = len(agent.trajectory) <= self.history_frames + self.future_frames
+				if self.evaluation_mode and sufficiently_large and sufficiently_small:
+					history = agent.trajectory[0:self.history_frames]
+					future = agent.trajectory[self.history_frames:self.history_frames+self.future_frames]
+					data.append((history, future))
 				else:
 					for i in range(self.history_frames - 1, len(agent.trajectory) - self.future_frames):
 						history = agent.trajectory[i-self.history_frames+1:i+1]
 						future = agent.trajectory[i+1:i+1+self.future_frames]
-						#history, future = self._subtract_mean(history, future)
 						data.append((history, future))
 		return data
 	

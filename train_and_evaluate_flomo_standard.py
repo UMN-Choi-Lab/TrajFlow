@@ -11,9 +11,9 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, smin=0.3, smax=1.7)
 #observation_site = ethucy.eth_observation_site
-observation_site = ethucy.hotel_observation_site
-#observation_site = ethucy.univ_observation_site
-#observation_site = ethucy.zata1_observation_site
+#observation_site = ethucy.hotel_observation_site
+observation_site = ethucy.univ_observation_site
+#observation_site = ethucy.zara1_observation_site
 #observation_site = ethucy.zara2_observation_site
 flomo = FloMo(hist_size=8, pred_steps=12, alpha=10, beta=0.2, gamma=0.02, num_in=2, num_feat=0, norm_rotation=True).to(device)
 
