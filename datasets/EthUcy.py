@@ -27,12 +27,18 @@ class EthUcyDataset(Dataset):
 		data = []
 		for scene in self.scenes:
 			for agent in scene.agents:
-				sufficiently_large = len(agent.trajectory) >= self.history_frames + 2
-				sufficiently_small = len(agent.trajectory) <= self.history_frames + self.future_frames
-				if self.evaluation_mode and sufficiently_large and sufficiently_small:
-					history = agent.trajectory[0:self.history_frames]
-					future = agent.trajectory[self.history_frames:self.history_frames+self.future_frames]
-					data.append((history, future))
+				#sufficiently_large = len(agent.trajectory) >= self.history_frames + 2
+				#sufficiently_small = len(agent.trajectory) <= self.history_frames + self.future_frames
+				#if self.evaluation_mode and sufficiently_large and sufficiently_small:
+				#	history = agent.trajectory[0:self.history_frames]
+				#	future = agent.trajectory[self.history_frames:self.history_frames+self.future_frames]
+				#	data.append((history, future))
+				if self.evaluation_mode:
+					if len(agent.trajectory) >= self.history_frames + 2:
+						for i in range(len(agent.trajectory) - self.history_frames):
+							history = agent.trajectory[i:i+self.history_frames]
+							future = agent.trajectory[i+self.history_frames:i+self.history_frames+self.future_frames]
+							data.append((history, future))
 				else:
 					for i in range(self.history_frames - 1, len(agent.trajectory) - self.future_frames):
 						history = agent.trajectory[i-self.history_frames+1:i+1]

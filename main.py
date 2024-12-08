@@ -27,7 +27,7 @@ with wandb.init() as run:
 		'encoder': 'GRU',
 		'flow': 'DNF',
 		'dataset': 'EthUcy',
-		'observation_site': 'univ',
+		'observation_site': 'eth',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -101,7 +101,7 @@ with wandb.init() as run:
 		total_loss = train(
 			observation_site=observation_site,
 			model=traj_flow,
-			epochs=150,
+			epochs=25,
 			lr=1e-3,
 			weight_decay=0,
 			gamma=0.999,
