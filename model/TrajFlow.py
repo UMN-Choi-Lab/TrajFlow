@@ -145,8 +145,8 @@ class TrajFlow(nn.Module):
 			x, angle = self._normalize_rotation(x)
 			feat = self._rotate_features(feat, angle)
 
-		mean = (torch.zeros(self.seq_len, self.input_dim) if self.marginal else torch.zeros(self.seq_len * self.input_dim)).to(x.device)
-		variance = (torch.ones(self.seq_len, self.input_dim) if self.marginal else torch.ones(self.seq_len * self.input_dim)).to(x.device)
+		mean = (torch.zeros(futures, self.input_dim) if self.marginal else torch.zeros(self.seq_len * self.input_dim)).to(x.device)
+		variance = (torch.ones(futures, self.input_dim) if self.marginal else torch.ones(self.seq_len * self.input_dim)).to(x.device)
 		base_dist = torch.distributions.MultivariateNormal(mean, torch.diag_embed(variance))
 
 		y = torch.stack([base_dist.sample().to(x.device) for _ in range(num_samples)])

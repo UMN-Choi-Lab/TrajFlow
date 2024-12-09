@@ -9,9 +9,9 @@ parameters:
   observation_site:
     values: [eth, hotel, univ, zara1, zara2]
   seed:     
-    values: [5839875, 9246794]
+    values: [9246794]
   encoder:
-    values: [GRU]
+    values: [CDE]
   flow:
     values: [CNF]
   masked_data_ratio: 

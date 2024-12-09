@@ -14,8 +14,8 @@ from visualize_temp import visualize_temp
 
 should_train = True
 should_serialize = False
-should_evaluate = True
-should_evaluate_generalizability = False
+should_evaluate = False
+should_evaluate_generalizability = True
 should_visualize = False
 verbose = False
 simple_visualization = False
@@ -101,7 +101,7 @@ with wandb.init() as run:
 		total_loss = train(
 			observation_site=observation_site,
 			model=traj_flow,
-			epochs=25,
+			epochs=150,
 			lr=1e-3,
 			weight_decay=0,
 			gamma=0.999,

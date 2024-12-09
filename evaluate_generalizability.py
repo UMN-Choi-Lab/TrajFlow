@@ -88,6 +88,7 @@ def evaluate_generalizability(observation_site_name, model, num_samples, device)
 			test_target = torch.tensor(observation_site.denormalize(test_target.cpu().numpy())).to(device)
 			samples = torch.tensor(observation_site.denormalize(samples.cpu().numpy())).to(device)
 			
+			samples = samples[:,:test_target.shape[1],:]
 			min_ade_sum += min_ade(test_target, samples)
 			min_fde_sum += min_fde(test_target, samples)
 			count += 1
