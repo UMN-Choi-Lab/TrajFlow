@@ -14,13 +14,14 @@ class Agent():
 		self.trajectory = trajectory
 
 class EthUcyDataset(Dataset):
-	def __init__(self, scenes, history_frames=8, future_frames=12, smin=0.3, smax=1.7, evaluation_mode=False):
+	def __init__(self, scenes, history_frames=8, future_frames=12, smin=0.3, smax=1.7, evaluation_mode=False, relaxed=True):
 		self.scenes = scenes
 		self.history_frames = history_frames
 		self.future_frames = future_frames
 		self.smin = smin
 		self.smax = smax
 		self.evaluation_mode = evaluation_mode
+		self.relaxed = relaxed
 		self.data = self._prepare_data()
 
 	def _prepare_data(self):
@@ -33,7 +34,7 @@ class EthUcyDataset(Dataset):
 				#	history = agent.trajectory[0:self.history_frames]
 				#	future = agent.trajectory[self.history_frames:self.history_frames+self.future_frames]
 				#	data.append((history, future))
-				if self.evaluation_mode:
+				if self.evaluation_mode and self.relaxed:
 					if len(agent.trajectory) >= self.history_frames + 2:
 						for i in range(len(agent.trajectory) - self.history_frames):
 							history = agent.trajectory[i:i+self.history_frames]
@@ -116,7 +117,7 @@ class EthUcyObservationSite():
 		return data
 
 class EthUcy():
-	def __init__(self, train_batch_size, test_batch_size, history, futures, smin, smax):
+	def __init__(self, train_batch_size, test_batch_size, history, futures, smin, smax, relaxed=True):
 		self.train_batch_size = train_batch_size
 		self.test_batch_size = test_batch_size
 		self.observation_sites = {}
@@ -124,6 +125,7 @@ class EthUcy():
 		self.futures = futures
 		self.smin = smin
 		self.smax = smax
+		self.relaxed = relaxed
 
 	@property
 	def eth_observation_site(self):
@@ -149,13 +151,13 @@ class EthUcy():
 		if data_source not in self.observation_sites:
 			train_scenes = self._load_data_source(data_source, 'train')
 			test_scenes = self._load_data_source(data_source, 'test')
-			train_loader = self._prepare_data(train_scenes, self.train_batch_size, False)
-			test_loader = self._prepare_data(test_scenes, self.test_batch_size, True)
+			train_loader = self._prepare_data(train_scenes, self.train_batch_size, False, self.relaxed)
+			test_loader = self._prepare_data(test_scenes, self.test_batch_size, True, self.relaxed)
 			self.observation_sites[data_source] = EthUcyObservationSite(train_loader, test_loader)
 		return self.observation_sites[data_source]
 	
-	def _prepare_data(self, scenes, batch_size, evaluation_set):
-		dataset = EthUcyDataset(scenes, self.history, self.futures, self.smin, self.smax, evaluation_set)
+	def _prepare_data(self, scenes, batch_size, evaluation_set, relaxed):
+		dataset = EthUcyDataset(scenes, self.history, self.futures, self.smin, self.smax, evaluation_set, relaxed)
 		return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 	def _load_data_source(self, data_source, data_class):

@@ -38,7 +38,7 @@ flomo.train()
 optim = torch.optim.Adam(flomo.parameters(), lr=1e-3, weight_decay=0)
 scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=0.999)
 
-for epoch in range(25):
+for epoch in range(150):
     losses = []
     for input, _, target in (pbar := tqdm(observation_site.train_loader)):
         input = input.to(device)
@@ -59,7 +59,7 @@ for epoch in range(25):
     losses = torch.stack(losses)
     pbar.set_description(f'Epoch {epoch} Loss {torch.mean(losses):.4f}')
 
-ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=24, smin=0.3, smax=1.7)
+ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=24, smin=0.3, smax=1.7, relaxed=False)
 observation_site = ethucy.zara2_observation_site
 
 flomo.eval()
@@ -88,6 +88,7 @@ with torch.no_grad():
         test_target = torch.tensor(observation_site.denormalize(test_target.cpu().numpy())).to(device)
         samples = torch.tensor(observation_site.denormalize(samples.cpu().numpy())).to(device)
 
+        samples = samples[:,:test_target.shape[1],:]
         min_ade_sum += min_ade(test_target, samples)
         min_fde_sum += min_fde(test_target, samples)
         count += 1

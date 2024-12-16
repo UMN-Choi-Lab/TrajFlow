@@ -33,7 +33,7 @@ def min_fde(y_true, y_pred):
 def evaluate_generalizability(observation_site_name, model, num_samples, device):
 	model.eval()
 
-	ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=24, smin=0.3, smax=1.7)
+	ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=24, smin=0.3, smax=1.7, relaxed=False)
 	observation_site = (
 		ethucy.eth_observation_site if observation_site_name == 'eth' else
 		ethucy.hotel_observation_site if observation_site_name == 'hotel' else
