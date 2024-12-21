@@ -20,15 +20,15 @@ class Flow(Enum):
 	DNF = 1
 	CNF = 2
 	
-def construct_causal_enocder(input_dim, embedding_dim, num_layers, causal_encoder):
+def construct_causal_enocder(input_dim, embedding_dim, hidden_dim, num_layers, causal_encoder):
 	if causal_encoder == CausalEnocder.GRU:
 		return GRU(input_dim=input_dim, hidden_dim=embedding_dim, num_layers=num_layers)
 	elif causal_encoder == CausalEnocder.LSTM:
 		return LSTM(input_dim=input_dim, hidden_dim=embedding_dim, num_layers=num_layers)
 	elif causal_encoder == CausalEnocder.TRANSFORMER:
-		return Transformer(input_dim=input_dim, hidden_dim=embedding_dim, num_layers=num_layers, num_heads=4)
+		return Transformer(input_dim=input_dim, hidden_dim=embedding_dim, num_layers=num_layers, num_heads=num_layers)
 	elif causal_encoder == CausalEnocder.CDE:
-		return CDE(input_dim=input_dim, embedding_dim=embedding_dim, hidden_dim=512, num_layers=num_layers)
+		return CDE(input_dim=input_dim, embedding_dim=embedding_dim, hidden_dim=hidden_dim, num_layers=num_layers)
 	else:
 		raise ValueError(f'{causal_encoder.name} is not a supported causal encoder')
 
@@ -58,7 +58,7 @@ class TrajFlow(nn.Module):
 		self.norm_rotation = norm_rotation
 		flow_input_dim = input_dim if marginal else seq_len * input_dim
 
-		self.causal_encoder = construct_causal_enocder(input_dim + feature_dim, embedding_dim, 4, causal_encoder)
+		self.causal_encoder = construct_causal_enocder(input_dim + feature_dim, embedding_dim, hidden_dim, 4, causal_encoder)
 		self.flow = construct_flow(flow_input_dim, embedding_dim, hidden_dim, flow, marginal)
 	
 	# TODO: from flomo make sure the names match up

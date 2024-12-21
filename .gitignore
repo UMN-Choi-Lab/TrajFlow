@@ -6,6 +6,5 @@ wandb/
 *.mp4
 *.png
 *.pt
-*.sh
 *.pdf
 *.svg

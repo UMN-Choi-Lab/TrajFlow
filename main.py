@@ -64,8 +64,8 @@ with wandb.init() as run:
 		seq_len = 12
 		input_dim = 2
 		feature_dim = 4
-		embedding_dim = 16#128
-		hidden_dim = 32#512
+		embedding_dim = 32#128
+		hidden_dim = 64#512
 		evaulation_samples = 20
 
 		ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, smin=0.3, smax=1.7)
