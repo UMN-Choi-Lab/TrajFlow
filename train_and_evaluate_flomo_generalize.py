@@ -30,7 +30,7 @@ def min_fde(y_true, y_pred):
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, smin=0.3, smax=1.7)
-observation_site = ethucy.zara2_observation_site
+observation_site = ethucy.eth_observation_site
 flomo = FloMo(hist_size=8, pred_steps=12, alpha=10, beta=0.2, gamma=0.02, num_in=2, num_feat=0).to(device)
 
 flomo.train()
@@ -60,7 +60,7 @@ for epoch in range(150):
     pbar.set_description(f'Epoch {epoch} Loss {torch.mean(losses):.4f}')
 
 ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=24, smin=0.3, smax=1.7, relaxed=False)
-observation_site = ethucy.zara2_observation_site
+observation_site = ethucy.eth_observation_site
 
 flomo.eval()
 

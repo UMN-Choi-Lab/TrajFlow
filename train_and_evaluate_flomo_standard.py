@@ -16,6 +16,8 @@ observation_site = ethucy.univ_observation_site
 #observation_site = ethucy.zara1_observation_site
 #observation_site = ethucy.zara2_observation_site
 flomo = FloMo(hist_size=8, pred_steps=12, alpha=10, beta=0.2, gamma=0.02, num_in=2, num_feat=0, norm_rotation=True).to(device)
+num_parameters = sum(p.numel() for p in flomo.parameters() if p.requires_grad)
+print(f'parameters: {num_parameters}')
 
 flomo.train()
 

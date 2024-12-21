@@ -14,8 +14,8 @@ from visualize_temp import visualize_temp
 
 should_train = True
 should_serialize = False
-should_evaluate = False
-should_evaluate_generalizability = True
+should_evaluate = True
+should_evaluate_generalizability = False
 should_visualize = False
 verbose = False
 simple_visualization = False
@@ -64,8 +64,8 @@ with wandb.init() as run:
 		seq_len = 12
 		input_dim = 2
 		feature_dim = 4
-		embedding_dim = 128
-		hidden_dim = 512
+		embedding_dim = 16#128
+		hidden_dim = 32#512
 		evaulation_samples = 20
 
 		ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, smin=0.3, smax=1.7)
@@ -92,6 +92,7 @@ with wandb.init() as run:
 		flow=flow,
 		marginal=marginal).to(device)
 	num_parameters = sum(p.numel() for p in traj_flow.parameters() if p.requires_grad)
+	print(f'parameters: {num_parameters}')
 	wandb.log({'parameters': num_parameters})
 
 	train_start_time = time.time()
