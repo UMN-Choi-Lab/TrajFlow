@@ -19,15 +19,15 @@ should_evaluate_generalizability = False
 should_visualize = False
 verbose = False
 simple_visualization = False
-marginal = True
+marginal = False
 
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
-		'encoder': 'GRU',
-		'flow': 'DNF',
+		'encoder': 'CDE',
+		'flow': 'CNF',
 		'dataset': 'EthUcy',
-		'observation_site': 'eth',
+		'observation_site': 'zara2',
 		'masked_data_ratio': 0
 	})
 	torch.manual_seed(run.config.seed)
@@ -51,7 +51,9 @@ with wandb.init() as run:
 		feature_dim = 5
 		embedding_dim = 128
 		hidden_dim = 512
+		training_epochs = 25
 		evaulation_samples = 1000
+		norm_rotate = False
 
 		ind = InD(
 			root="data",
@@ -64,9 +66,11 @@ with wandb.init() as run:
 		seq_len = 12
 		input_dim = 2
 		feature_dim = 4
-		embedding_dim = 32#128
-		hidden_dim = 64#512
+		embedding_dim = 32
+		hidden_dim = 64
+		training_epochs = 150
 		evaulation_samples = 20
+		norm_rotate = True
 
 		ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, smin=0.3, smax=1.7)
 		observation_site = (
@@ -90,7 +94,8 @@ with wandb.init() as run:
 		hidden_dim=hidden_dim,
 		causal_encoder=causal_encoder,
 		flow=flow,
-		marginal=marginal).to(device)
+		marginal=marginal,
+		norm_rotation=norm_rotate).to(device)
 	num_parameters = sum(p.numel() for p in traj_flow.parameters() if p.requires_grad)
 	print(f'parameters: {num_parameters}')
 	wandb.log({'parameters': num_parameters})
@@ -102,7 +107,7 @@ with wandb.init() as run:
 		total_loss = train(
 			observation_site=observation_site,
 			model=traj_flow,
-			epochs=150,
+			epochs=training_epochs,
 			lr=1e-3,
 			weight_decay=0,
 			gamma=0.999,
@@ -131,10 +136,8 @@ with wandb.init() as run:
 		wandb.log({'loss': loss})
 			
 	if should_serialize:
-		model_name = 'v_marginal.pt'
-		#model_name = 'ind_marginal.pt'
-		#model_name = 'ind_joint.pt'
-		#model_name = f'traj_flow_{run.config.encoder}_{run.config.flow}_{run.config.masked_data_ratio}_{run.config.seed}.pt'
+		suffix = 'marginal' if marginal else 'joint'
+		model_name = f'trajflow_{suffix}.pt'
 		if should_train:
 			torch.save(traj_flow.state_dict(), model_name)
 		traj_flow.load_state_dict(torch.load(model_name))
@@ -167,21 +170,21 @@ with wandb.init() as run:
 		wandb.log({'generalized min ade': generalized_min_ade, 'generalized min fde': generalized_min_fde})
 
 	if should_visualize:
-		# visualize(
-		# 	observation_site=ind.observation_site1,
-		# 	model=traj_flow,
-		# 	num_samples=10,
-		# 	steps=100,#1000,
-		# 	prob_threshold=0.001,
-		# 	output_dir='visualization',
-		# 	simple=simple_visualization,
-		# 	device=device)
-		visualize_temp(
-			data_loader=observation_site.test_loader,
+		visualize(
+			observation_site=observation_site,
 			model=traj_flow,
-			num_samples=10,
-			steps=100,#1000,
-			prob_threshold=0.001,
-			output_dir='visualization_temp',
-			simple=simple_visualization,
-			device=device)
+		 	num_samples=10,
+		 	steps=100,#1000,
+		 	prob_threshold=0.001,
+		 	output_dir='visualization',
+		 	simple=simple_visualization,
+		 	device=device)
+		#visualize_temp(
+		#	data_loader=observation_site.test_loader,
+		#	model=traj_flow,
+		#	num_samples=10,
+		#	steps=100,#1000,
+		#	prob_threshold=0.001,
+		#	output_dir='visualization_temp',
+		#	simple=simple_visualization,
+		#	device=device)

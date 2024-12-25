@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from torch.distributions.normal import Normal
 import numpy as np
 
+#TODO: probably won't keep this in the final project repo... just for experiments sake this is here (same goes for all FloMo scripts)
+
 """
 Implementation of rational-quadratic splines from https://github.com/bayesiains/nsf.
 """

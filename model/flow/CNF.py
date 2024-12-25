@@ -10,6 +10,7 @@ class ODEFunc(nn.Module):
 		super(ODEFunc, self).__init__()
 
 		self.marginal = marginal
+		self.epsilon = None
 
 		temporal_context_dim = 2 if marginal else 1
 		dim_list = [input_dim] + list(hidden_dims) + [input_dim]
@@ -37,7 +38,23 @@ class ODEFunc(nn.Module):
 				z_dot = F.tanh(z_dot)
 		return z_dot
 	
+	def _gaussian_noise(self, z):
+		noise = torch.randn_like(z).to(z)
+		self.epsilon = noise
+	
+	def _rademacher_noise(self, z):
+		random_bits = torch.randint(0, 2, z.shape, device=z.device, dtype=z.dtype)
+		noise = 2 * random_bits - 1
+		self.epsilon = noise
+		
+	def _hutchinson_estimator(self, z_dot, z):
+		e = self.epsilon
+		z_dot_e = torch.autograd.grad(z_dot, z, grad_outputs=e, create_graph=True)[0]
+		trace_estimate = torch.sum(z_dot_e * e, dim=-1)
+		return trace_estimate
+	
 	def _jacobian_trace_joint(self, z_dot, z): # might need hutchson estimator here for efficency
+		return self._hutchinson_estimator(z_dot, z)
 		trace = 0.0
 		for i in range(z_dot.shape[1]):
 			trace += torch.autograd.grad(z_dot[:, i].sum(), z, create_graph=True)[0][:, i]
@@ -85,6 +102,9 @@ class CNF(torch.nn.Module):
 			integration_times = torch.flip(integration_times, [0])
 
 		condition = self.condition_norm(condition) #no norm? lets let the encoder handle this if needed
+
+		if not self.marginal: # if not marginal produce noise for hutchinson estimation
+			self.time_derivative._rademacher_noise(z)
 		
 		z, delta_logpz = self.n1(z, delta_logpz, reverse) if not reverse else self.n2(z, delta_logpz, reverse)
 		state = odeint_adjoint(self.time_derivative, (z, delta_logpz, condition), integration_times, method='dopri5', atol=1e-5, rtol=1e-5)

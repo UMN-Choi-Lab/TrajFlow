@@ -4,10 +4,10 @@ from collections import defaultdict
 api = wandb.Api()
 
 
-#sweep_id = 'oa8a4ll1' # CDE-CNF
-#sweep_id = '1i8ccfmm' # GRU-DNF
-#sweep_id = 'tiol73rx' # GRU-CNF
-sweep_id = 'm8odni4w' # CDE-DNF
+#sweep_id = '8bg3cief' # GRU-DNF
+#sweep_id = 'e1cbol5u' # GRU-CNF
+sweep_id = 'ojbledwd' # CDE-DNF
+#sweep_id = 'mb3crbk9' # CDE-CNF
 sweep = api.sweep(f'mitchkos21-university-of-minnesota/trajflow_dry_run/{sweep_id}')
 
 config_counts = defaultdict(int)

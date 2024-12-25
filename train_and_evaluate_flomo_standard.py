@@ -1,3 +1,4 @@
+import time
 import torch
 import torch.nn.functional as F
 import torch.distributions as dist
@@ -24,7 +25,9 @@ flomo.train()
 optim = torch.optim.Adam(flomo.parameters(), lr=1e-3, weight_decay=0)
 #scheduler = torch.optim.lr_scheduler.ExponentialLR(optim, gamma=0.999)
 
-for epoch in range(25):
+train_start_time = time.time()
+
+for epoch in range(150):
     losses = []
     for input, _, target in (pbar := tqdm(observation_site.train_loader)):
         input = input.to(device)
@@ -44,6 +47,10 @@ for epoch in range(25):
 
     losses = torch.stack(losses)
     pbar.set_description(f'Epoch {epoch} Loss {torch.mean(losses):.4f}')
+
+train_end_time = time.time()
+train_runtime = train_end_time - train_start_time
+print(f'train runtime: {train_runtime}')
 
 def rmse(y_true, y_pred):
     mse = F.mse_loss(y_true.expand_as(y_pred), y_pred, reduction="mean")
@@ -76,6 +83,15 @@ def min_fde(y_true, y_pred):
     return fde.min()
 
 flomo.eval()
+
+input, feature, _ = next(iter(observation_site.test_loader))
+input = input.to(device)
+feature = feature.to(device)
+inference_start_time = time.time()
+flomo.sample(100, input)
+inference_end_time = time.time()
+inference_runtime = inference_end_time - inference_start_time
+print(f'inference runtime: {inference_runtime}')
 
 with torch.no_grad():
     nll_sum = 0
