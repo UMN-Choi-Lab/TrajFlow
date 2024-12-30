@@ -357,10 +357,10 @@ class FloMo(nn.Module):
             raise NotImplementedError
 
         # core modules
-        self.obs_encoding_size = 16
+        self.obs_encoding_size = 128
         self.obs_encoder = RNN(nin=total_input, nout=self.obs_encoding_size, device=device)
-        self.flow = NeuralSplineFlow(nin=self.output_size, nc=self.obs_encoding_size, n_layers=10, K=8,
-                                     B=self.B, hidden_dim=[32, 32, 32, 32, 32], device=device)
+        self.flow = NeuralSplineFlow(nin=self.output_size, nc=self.obs_encoding_size, n_layers=10, K=32,
+                                     B=self.B, hidden_dim=[150, 150, 150, 150, 150], device=device)
 
         # move model to specified device
         self.device = device

@@ -3,7 +3,7 @@ from collections import defaultdict
 
 api = wandb.Api()
 
-sweep_id = '05upvutu'
+sweep_id = '1brpc9ni'
 sweep = api.sweep(f'mitchkos21-university-of-minnesota/trajflow_dry_run/{sweep_id}')
 
 config_counts = defaultdict(int)
@@ -63,9 +63,10 @@ for encoder in ['GRU', 'CDE']:
         print(key)
         train_runtime = 0
         inference_runtime = 0
-        for masked_data_ratio in [0, 0.3, 0.5, 0.7]:
+        masked_data_ratios = [0] #[0, 0.3, 0.5, 0.7]
+        for masked_data_ratio in masked_data_ratios:
             extended_key = f'{key}-{masked_data_ratio}'
             train_runtime += train_runtime_results[extended_key]
             inference_runtime += inference_runtime_results[extended_key]
-        print(f'train runtime: {train_runtime / 4}')
-        print(f'inference runtime: {inference_runtime / 4}')
+        print(f'train runtime: {train_runtime / len(masked_data_ratios)}')
+        print(f'inference runtime: {inference_runtime / len(masked_data_ratios)}')

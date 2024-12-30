@@ -13,10 +13,14 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 ethucy = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, smin=0.3, smax=1.7)
 #observation_site = ethucy.eth_observation_site
 #observation_site = ethucy.hotel_observation_site
-observation_site = ethucy.univ_observation_site
+#observation_site = ethucy.univ_observation_site
 #observation_site = ethucy.zara1_observation_site
 #observation_site = ethucy.zara2_observation_site
-flomo = FloMo(hist_size=8, pred_steps=12, alpha=10, beta=0.2, gamma=0.02, num_in=2, num_feat=0, norm_rotation=True).to(device)
+ind = InD(root="data", train_ratio=0.75, train_batch_size=64, test_batch_size=1, missing_rate=0)
+observation_site = ind.observation_site1
+
+#flomo = FloMo(hist_size=8, pred_steps=12, alpha=10, beta=0.2, gamma=0.02, num_in=2, num_feat=0, norm_rotation=True).to(device)
+flomo = FloMo(hist_size=100, pred_steps=100, alpha=1, beta=0, gamma=0, num_in=2, num_feat=0, norm_rotation=True).to(device)
 num_parameters = sum(p.numel() for p in flomo.parameters() if p.requires_grad)
 print(f'parameters: {num_parameters}')
 
@@ -27,11 +31,20 @@ optim = torch.optim.Adam(flomo.parameters(), lr=1e-3, weight_decay=0)
 
 train_start_time = time.time()
 
-for epoch in range(150):
+for epoch in range(25):
     losses = []
     for input, _, target in (pbar := tqdm(observation_site.train_loader)):
         input = input.to(device)
         target = target.to(device)
+
+        input = torch.FloatTensor(observation_site.denormalize(input.cpu().numpy())).to(device)
+        target = torch.FloatTensor(observation_site.denormalize(target.cpu().numpy())).to(device)
+
+        full_trajectory = torch.cat([input, target], dim=1)
+        trajectory_mean = full_trajectory.mean(dim=1, keepdim=True)
+
+        input = input - trajectory_mean
+        target = target - trajectory_mean
 
         log_prob = flomo.log_prob(target, input)
         loss = -torch.mean(log_prob)
@@ -106,12 +119,21 @@ with torch.no_grad():
         test_feature = test_feature.to(device)
         test_target = test_target.to(device)
 
+        test_input = torch.FloatTensor(observation_site.denormalize(test_input.cpu().numpy())).to(device)
+        test_target = torch.FloatTensor(observation_site.denormalize(test_target.cpu().numpy())).to(device)
+
+        full_trajectory = torch.cat([test_input, test_target], dim=1)
+        trajectory_mean = full_trajectory.mean(dim=1, keepdim=True)
+
+        test_input = test_input - trajectory_mean
+        test_target = test_target - trajectory_mean
+
         # NLL same as training loss
         #log_prob = flomo.log_prob(test_target, test_input)
         #nll_sum += -torch.mean(log_prob)
 
         # sample based evaluation
-        samples, _ = flomo.sample(20, test_input)
+        samples, _ = flomo.sample(1000, test_input)
         samples = samples[:,:test_target.shape[1],:]
         #test_target = torch.tensor(observation_site.denormalize(test_target.cpu().numpy())).to(device)
         #samples = torch.tensor(observation_site.denormalize(samples.cpu().numpy())).to(device)

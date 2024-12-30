@@ -6,8 +6,9 @@ api = wandb.Api()
 
 #sweep_id = '8bg3cief' # GRU-DNF
 #sweep_id = 'e1cbol5u' # GRU-CNF
-sweep_id = 'ojbledwd' # CDE-DNF
+#sweep_id = 'ojbledwd' # CDE-DNF
 #sweep_id = 'mb3crbk9' # CDE-CNF
+sweep_id = '3haj7vsf' # CDE-CNF (joint)
 sweep = api.sweep(f'mitchkos21-university-of-minnesota/trajflow_dry_run/{sweep_id}')
 
 config_counts = defaultdict(int)
@@ -79,17 +80,3 @@ for key in config_counts.keys():
 
 print(f'average train runtime: {average_train_runtime / total_sites}')
 print(f'average inference runtime: {average_inference_runtime / total_sites}')
-
-
-# for encoder in ['GRU', 'CDE']:
-#     for flow in ['DNF', 'CNF']:
-#         key = f'{encoder}-{flow}'
-#         print(key)
-#         train_runtime = 0
-#         inference_runtime = 0
-#         for masked_data_ratio in [0, 0.3, 0.5, 0.7]:
-#             extended_key = f'{key}-{masked_data_ratio}'
-#             train_runtime += train_runtime_results[extended_key]
-#             inference_runtime += inference_runtime_results[extended_key]
-#         print(f'train runtime: {train_runtime / 4}')
-#         print(f'inference runtime: {inference_runtime / 4}')

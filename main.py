@@ -8,30 +8,31 @@ from datasets.EthUcy import EthUcy
 from model.TrajFlow import TrajFlow, CausalEnocder, Flow
 from train import train
 from evaluate import evaluate
-from evaluate_generalizability import evaluate_generalizability
 from visualize import visualize
 from visualize_temp import visualize_temp
 
 should_train = True
 should_serialize = False
 should_evaluate = True
-should_evaluate_generalizability = False
 should_visualize = False
-verbose = False
 simple_visualization = False
 marginal = False
+verbose = False
 
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
-		'encoder': 'CDE',
-		'flow': 'CNF',
+		'encoder': 'GRU',
+		'flow': 'DNF',
 		'dataset': 'EthUcy',
 		'observation_site': 'zara2',
 		'masked_data_ratio': 0
 	})
+
 	torch.manual_seed(run.config.seed)
 
+	causal_encoder=CausalEnocder[run.config.encoder]
+	flow=Flow[run.config.flow]
 	dataset = Dataset[run.config.dataset]
 
 	seq_len = 0
@@ -39,9 +40,6 @@ with wandb.init() as run:
 	feature_dim = 0
 	embedding_dim = 0
 	hidden_dim = 0
-
-	causal_encoder=CausalEnocder[run.config.encoder]
-	flow=Flow[run.config.flow]
 
 	observation_site = None
 
@@ -96,8 +94,10 @@ with wandb.init() as run:
 		flow=flow,
 		marginal=marginal,
 		norm_rotation=norm_rotate).to(device)
+	
 	num_parameters = sum(p.numel() for p in traj_flow.parameters() if p.requires_grad)
-	print(f'parameters: {num_parameters}')
+	if verbose:
+		print(f'parameters: {num_parameters}')
 	wandb.log({'parameters': num_parameters})
 
 	train_start_time = time.time()
@@ -156,18 +156,6 @@ with wandb.init() as run:
 			print(f'min fde: {min_fde}')
 			print(f'nll: {nll}')
 		wandb.log({'rmse': rmse, 'crps': crps, 'min ade': min_ade, 'min fde': min_fde, 'nll': nll})
-
-	if should_evaluate_generalizability:
-		generalized_min_ade, generalized_min_fde = evaluate_generalizability(
-			observation_site_name=run.config.observation_site,
-			model=traj_flow,
-			num_samples=evaulation_samples,
-			device=device)
-		
-		if verbose:
-			print(f'generalized min ade: {generalized_min_ade}')
-			print(f'generalized min fde: {generalized_min_fde}')
-		wandb.log({'generalized min ade': generalized_min_ade, 'generalized min fde': generalized_min_fde})
 
 	if should_visualize:
 		visualize(
