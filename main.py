@@ -16,8 +16,8 @@ should_serialize = False
 should_evaluate = True
 should_visualize = False
 simple_visualization = False
-marginal = False
 verbose = False
+marginal = False
 
 with wandb.init() as run:
 	run.config.setdefaults({

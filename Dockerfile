@@ -9,7 +9,7 @@ RUN apt-get update && \
     apt-get install -y python3-pip python3-dev && \
     apt-get clean
 
-# Set python3.9 as the default python3
+# Set python 3.9 as the default python3
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1 && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
 
