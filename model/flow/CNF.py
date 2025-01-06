@@ -24,7 +24,6 @@ class ODEFunc(nn.Module):
 		if self.marginal:
 			condition = condition.unsqueeze(1).expand(-1, z.shape[1], -1)
 			time_encoding = t.expand(z.shape[0], z.shape[1], 1)
-			#positional_encoding = (torch.cumsum(torch.ones_like(z)[:, :, 0], 1) / z.shape[1]).unsqueeze(-1)
 			positional_encoding = torch.cumsum(torch.ones_like(z)[:, :, 0], 1).unsqueeze(-1)
 			context = torch.cat([positional_encoding, time_encoding, condition], dim=-1)
 		else:
@@ -53,7 +52,7 @@ class ODEFunc(nn.Module):
 		trace_estimate = torch.sum(z_dot_e * e, dim=-1)
 		return trace_estimate
 	
-	def _jacobian_trace_joint(self, z_dot, z): # might need hutchson estimator here for efficency
+	def _jacobian_trace_joint(self, z_dot, z): # might need hutchson estimator here for efficency (make it configurable if we use hutchonson?)
 		return self._hutchinson_estimator(z_dot, z)
 		trace = 0.0
 		for i in range(z_dot.shape[1]):

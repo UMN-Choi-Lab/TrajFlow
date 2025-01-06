@@ -13,18 +13,18 @@ from visualize_temp import visualize_temp
 
 should_train = True
 should_serialize = False
-should_evaluate = True
-should_visualize = False
+should_evaluate = False
+should_visualize = True
 simple_visualization = False
 verbose = False
-marginal = False
+marginal = True
 
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
 		'encoder': 'GRU',
 		'flow': 'DNF',
-		'dataset': 'EthUcy',
+		'dataset': 'InD',
 		'observation_site': 'zara2',
 		'masked_data_ratio': 0
 	})
@@ -158,21 +158,21 @@ with wandb.init() as run:
 		wandb.log({'rmse': rmse, 'crps': crps, 'min ade': min_ade, 'min fde': min_fde, 'nll': nll})
 
 	if should_visualize:
-		visualize(
-			observation_site=observation_site,
+		# visualize(
+		# 	observation_site=observation_site,
+		# 	model=traj_flow,
+		#  	num_samples=10,
+		#  	steps=100,#1000,
+		#  	prob_threshold=0.001,
+		#  	output_dir='visualization',
+		#  	simple=simple_visualization,
+		#  	device=device)
+		visualize_temp(
+			data_loader=observation_site.test_loader,
 			model=traj_flow,
-		 	num_samples=10,
-		 	steps=100,#1000,
-		 	prob_threshold=0.001,
-		 	output_dir='visualization',
-		 	simple=simple_visualization,
-		 	device=device)
-		#visualize_temp(
-		#	data_loader=observation_site.test_loader,
-		#	model=traj_flow,
-		#	num_samples=10,
-		#	steps=100,#1000,
-		#	prob_threshold=0.001,
-		#	output_dir='visualization_temp',
-		#	simple=simple_visualization,
-		#	device=device)
+			num_samples=10,
+			steps=100,#1000,
+			prob_threshold=0.001,
+			output_dir='visualization_temp',
+			simple=simple_visualization,
+			device=device)

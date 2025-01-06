@@ -126,8 +126,8 @@ class InD():
 		tracks = pd.read_csv(os.path.join(f'{self.root}', f'{observation_site}_tracks.csv'))
 		tracks_metadata = pd.read_csv(os.path.join(f'{self.root}', f'{observation_site}_tracksMeta.csv'))
 
-		car_list = ['car', 'truck_bus']
-		mask = (tracks_metadata['class'] == car_list[0]) | (tracks_metadata['class'] == car_list[1])
+		vehicle_list = ['car', 'truck_bus']
+		mask = (tracks_metadata['class'] == vehicle_list[0]) | (tracks_metadata['class'] == vehicle_list[1])
 		index_df = tracks_metadata[mask]
 
 		numframes = index_df['numFrames']
