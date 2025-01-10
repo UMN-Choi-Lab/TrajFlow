@@ -35,8 +35,8 @@ observed_traj = np.array([[0, 0], [1, 1], [2, 0]])
 unobserved_traj = np.array([[0, 1], [1, 2], [2, 1]])
 
 legend_elements = [
-    Line2D([0], [0], color='red', lw=4, label='Observed Trajectory'),
-    Line2D([0], [0], color='lightcoral', lw=4, label='Unobserved Trajectory')
+    Line2D([0], [0], color='red', lw=6, label='Observed Trajectory'),
+    Line2D([0], [0], color='lightcoral', lw=6, label='Unobserved Trajectory')
 ]
 
 fig.legend(handles=legend_elements, prop={'size': 12})

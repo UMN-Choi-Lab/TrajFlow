@@ -17,9 +17,9 @@ observation_site = eth.zara1_observation_site
 
 traj_flow = TrajFlow(
     seq_len=12, input_dim=2, feature_dim=4,
-    embedding_dim=32, hidden_dim=64,
-    causal_encoder=CausalEnocder.CDE,
-    flow=Flow.CNF,
+    embedding_dim=128, hidden_dim=512,
+    causal_encoder=CausalEnocder.GRU,
+    flow=Flow.DNF,
     marginal=True,
     norm_rotation=True).to(device)
 traj_flow.load_state_dict(torch.load('trajflow_marginal.pt'))
@@ -34,15 +34,22 @@ target = target.to(device)
 plt.figure(figsize=(10, 8))
 plt.axis('off')
 
+x_center = 0
+y_center = 0
+
 for i in range(num_trajectories):
     observed_traj = input[i].cpu().numpy()
     observed_traj = np.stack([observed_traj[:, 0], -observed_traj[:, 1]], axis=-1)
+    x_center = observed_traj[-1, 0]
+    y_center = -observed_traj[-1, 1]
     plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='black', linewidth=5, label='Observed Trajectory')
 
-steps = 400
-batch_size = 4000
-linspace = torch.linspace(0, 1, steps)
-x, y = torch.meshgrid(linspace, linspace)
+steps = 1000
+batch_size = 10000
+grid_range = 7
+linspace_x = torch.linspace(x_center - grid_range, x_center + grid_range, steps)
+linspace_y = torch.linspace(y_center - grid_range, y_center + grid_range, steps)
+x, y = torch.meshgrid(linspace_x, linspace_y)
 grid = torch.stack((x.flatten(), y.flatten()), dim=-1).to(device)
 
 likelihoods = []
@@ -54,30 +61,32 @@ for i in range(num_trajectories):
         y = target[i].unsqueeze(0)
         feat = feature[i].unsqueeze(0)
 
-        x, y, angle = traj_flow._normalize_rotation(x, y)
-        feat = traj_flow._rotate_features(feat, angle)
         embedding = traj_flow._embedding(x, feat)
         embedding = embedding.repeat(batch_size, 1)
 
         pz_t1 = []
         for grid_batch in grid.split(batch_size, dim=0):
             grid_batch = grid_batch.unsqueeze(1).expand(-1, 12, -1)
-            grid_batch = traj_flow._rotate(grid_batch, x_t, angle)
             z_t0, delta_logpz = traj_flow.flow(grid_batch, embedding)
             logpz_t0, logpz_t1 = traj_flow.log_prob(z_t0, delta_logpz)
-            pz_t1.append(logpz_t1)
+            pz_t1.append(logpz_t1.exp())
         
         pz_t1 = torch.cat(pz_t1, dim=0)
-        likelihoods.append(pz_t1)
+        fused_probs = torch.sum(pz_t1, dim=-1)
+        fused_normalized_probs = fused_probs / torch.max(fused_probs)
+        likelihoods.append(fused_normalized_probs)
 t = likelihoods[0]
 
 grid_numpy = grid.cpu().detach().numpy()
 xx = grid_numpy[:, 0].reshape(steps, steps)
 yy = -grid_numpy[:, 1].reshape(steps, steps)
-#likelihood = log_likelihood.exp().cpu().numpy().reshape(steps, steps)
-#likelihood = t[:, 0].cpu().numpy().reshape(steps, steps)
-likelihood = torch.mean(t, dim=-1).cpu().numpy().reshape(steps, steps)
-likelihood = likelihood / np.max(likelihood)
-plt.pcolormesh(xx, yy, likelihood, shading='auto', cmap=plt.cm.viridis, alpha=0.5, vmin=0, vmax=1)
+likelihood = t.cpu().numpy().reshape(steps, steps)
+likelihood = np.where(likelihood < 0.0035, np.nan, likelihood)
+heat_map = plt.pcolormesh(xx, yy, likelihood, shading='auto', cmap=plt.cm.viridis)
 
+cbar = plt.colorbar(heat_map, label='Likelihood', pad=0.2, aspect=20)
+cbar.ax.set_ylabel('Likelihood', rotation=270, labelpad=15)
+plt.legend(loc='upper left', bbox_to_anchor=(1.1, 1.1), borderaxespad=0)
+
+plt.savefig('occupancy_map.png', dpi=300, bbox_inches='tight')
 plt.show()

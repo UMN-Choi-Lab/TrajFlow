@@ -33,7 +33,7 @@ plt.figure(figsize=(10, 6))
 #for label, values in loss_dictionary.items():
 for key in ['GRU-DNF', 'GRU-CNF', 'CDE-DNF', 'CDE-CNF']:
     values = loss_dictionary[key]
-    plt.plot(values, label=key)
+    plt.plot(range(1, num_epochs + 1), values, label=key)
 plt.xlabel('Epoch')
 plt.ylabel('NLL')
 plt.legend()

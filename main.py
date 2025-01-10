@@ -12,8 +12,8 @@ from visualize import visualize
 from visualize_temp import visualize_temp
 
 should_train = True
-should_serialize = False
-should_evaluate = False
+should_serialize = True
+should_evaluate = True
 should_visualize = True
 simple_visualization = False
 verbose = False
@@ -24,7 +24,7 @@ with wandb.init() as run:
 		'seed': random.randint(0, 2**32 - 1),
 		'encoder': 'GRU',
 		'flow': 'DNF',
-		'dataset': 'InD',
+		'dataset': 'EthUcy',
 		'observation_site': 'zara2',
 		'masked_data_ratio': 0
 	})
@@ -64,8 +64,8 @@ with wandb.init() as run:
 		seq_len = 12
 		input_dim = 2
 		feature_dim = 4
-		embedding_dim = 32
-		hidden_dim = 64
+		embedding_dim = 128#32
+		hidden_dim = 512#64
 		training_epochs = 150
 		evaulation_samples = 20
 		norm_rotate = True
@@ -125,7 +125,7 @@ with wandb.init() as run:
 	input = input.to(device)
 	feature = feature.to(device)
 	inference_start_time = time.time()
-	traj_flow.sample(input, feature, 12, 100)
+	traj_flow.sample(input, feature, 100, 100)
 	inference_end_time = time.time()
 	inference_runtime = inference_end_time - inference_start_time
 	if verbose:
@@ -162,7 +162,7 @@ with wandb.init() as run:
 		# 	observation_site=observation_site,
 		# 	model=traj_flow,
 		#  	num_samples=10,
-		#  	steps=100,#1000,
+		#  	steps=1000,
 		#  	prob_threshold=0.001,
 		#  	output_dir='visualization',
 		#  	simple=simple_visualization,
@@ -170,8 +170,8 @@ with wandb.init() as run:
 		visualize_temp(
 			data_loader=observation_site.test_loader,
 			model=traj_flow,
-			num_samples=10,
-			steps=100,#1000,
+			num_samples=20,
+			steps=1000,
 			prob_threshold=0.001,
 			output_dir='visualization_temp',
 			simple=simple_visualization,

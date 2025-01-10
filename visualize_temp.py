@@ -31,7 +31,6 @@ def compute_pzt1(model, input, features, grid):
         for grid_batch in grid.split(batch_size, dim=0):
             #grid_batch = grid_batch.unsqueeze(1).expand(-1, 100, -1)
             grid_batch = grid_batch.unsqueeze(1).expand(-1, 12, -1)
-            #grid_batch = grid_batch.unsqueeze(1).expand(-1, 24, -1)
             z_t0, delta_logpz = model.flow(grid_batch, embedding)
             logpz_t0, logpz_t1 = model.log_prob(z_t0, delta_logpz)
             pz_t1.append(logpz_t1.exp())
@@ -50,7 +49,6 @@ def generate_video(grid, pz_t1, prob_threshold,
 
     #for t in range(100):
     for t in range(12):
-    #for t in range(24):
         likelihood = pz_t1[:, t].cpu().numpy().reshape(steps, steps)
         likelihood = likelihood / np.max(likelihood)
         likelihood = np.where(likelihood < prob_threshold, np.nan, likelihood)
@@ -105,7 +103,7 @@ def visualize_temp(data_loader, model, num_samples, steps, prob_threshold, outpu
     model.eval()
 
     #linspace = torch.linspace(0, 1, steps)
-    linspace = torch.linspace(0, 1, steps)
+    linspace = torch.linspace(-10, 10, steps)
     x, y = torch.meshgrid(linspace, linspace)
     grid = torch.stack((x.flatten(), y.flatten()), dim=-1).to(device)
 
