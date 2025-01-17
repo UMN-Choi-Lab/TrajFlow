@@ -4,17 +4,17 @@ import torch.nn as nn
 from torch.distributions import Normal
 
 class SequentialFlow(nn.Sequential):
-    def forward(self, x, y):
+    def forward(self, x, y, sampling_frequency=1):
         sum_log_abs_det_jacobians = 0
         for module in self:
-            x, log_abs_det_jacobian = module(x, y)
+            x, log_abs_det_jacobian = module(x, y, sampling_frequency)
             sum_log_abs_det_jacobians += log_abs_det_jacobian
         return x, sum_log_abs_det_jacobians
 
-    def inverse(self, u, y):
+    def inverse(self, u, y, sampling_frequency=1):
         sum_log_abs_det_jacobians = 0
         for module in reversed(self):
-            u, log_abs_det_jacobian = module.inverse(u, y)
+            u, log_abs_det_jacobian = module.inverse(u, y, sampling_frequency)
             sum_log_abs_det_jacobians += log_abs_det_jacobian
         return u, sum_log_abs_det_jacobians
     
@@ -31,7 +31,7 @@ class RunningAverageBatchNorm(nn.Module):
         self.register_buffer("running_mean", torch.zeros(input_size))
         self.register_buffer("running_var", torch.ones(input_size))
 
-    def forward(self, x, cond_y):
+    def forward(self, x, cond_y, sampling_frequency):
         if self.training:
             self.batch_mean = x.view(-1, x.shape[-1]).mean(0)
             self.batch_var = x.view(-1, x.shape[-1]).var(0)
@@ -51,7 +51,7 @@ class RunningAverageBatchNorm(nn.Module):
         
         return y, log_abs_det_jacobian.expand_as(x)
 
-    def inverse(self, y, cond_y):
+    def inverse(self, y, cond_y, sampling_frequency):
         if self.training:
             mean = self.batch_mean
             var = self.batch_var
@@ -83,13 +83,13 @@ class AffineCouplingLayer(nn.Module):
 
         self.t_net = copy.deepcopy(self.s_net)
 
-    def forward(self, x, y):
+    def forward(self, x, y, sampling_frequency):
         mx = x * self.mask
         y = y.unsqueeze(1).expand(-1, mx.shape[1], -1) if self.marginal else y
         
         if self.marginal:
-            #index = (torch.cumsum(torch.ones_like(x)[:, :, 0], 1) / x.shape[1]).unsqueeze(-1)
             index = torch.cumsum(torch.ones_like(x)[:, :, 0], 1).unsqueeze(-1)
+            index = index / sampling_frequency
             input = torch.cat([y, index, mx], dim=-1) 
         else :
             input = torch.cat([y, mx], dim=-1)
@@ -104,13 +104,13 @@ class AffineCouplingLayer(nn.Module):
         
         return u, log_abs_det_jacobian
 
-    def inverse(self, u, y):
+    def inverse(self, u, y, sampling_frequency):
         mu = u * self.mask
         y = y.unsqueeze(1).expand(-1, mu.shape[1], -1) if self.marginal else y
 
         if self.marginal:
-            #index = (torch.cumsum(torch.ones_like(u)[:, :, 0], 1) / u.shape[1]).unsqueeze(-1)
             index = torch.cumsum(torch.ones_like(u)[:, :, 0], 1).unsqueeze(-1)
+            index = index / sampling_frequency
             input = torch.cat([y, index, mu], dim=-1)
         else:
             input = torch.cat([y, mu], dim=-1)
@@ -138,6 +138,6 @@ class DNF(nn.Module):
 
         self.net = SequentialFlow(*modules)
     
-    def forward(self, z, condition, reverse=False):
-        z, delta_logpz = self.net.inverse(z, condition) if reverse else self.net.forward(z, condition)
+    def forward(self, z, condition, reverse=False, sampling_frequency=1):
+        z, delta_logpz = self.net.inverse(z, condition, sampling_frequency) if reverse else self.net.forward(z, condition, sampling_frequency)
         return z, torch.sum(-delta_logpz, dim=-1) #Negative to match CNF formulation

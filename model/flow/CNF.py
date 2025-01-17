@@ -10,6 +10,7 @@ class ODEFunc(nn.Module):
 		super(ODEFunc, self).__init__()
 
 		self.marginal = marginal
+		self.sampling_frequency = 1
 		self.epsilon = None
 
 		temporal_context_dim = 2 if marginal else 1
@@ -25,6 +26,7 @@ class ODEFunc(nn.Module):
 			condition = condition.unsqueeze(1).expand(-1, z.shape[1], -1)
 			time_encoding = t.expand(z.shape[0], z.shape[1], 1)
 			positional_encoding = torch.cumsum(torch.ones_like(z)[:, :, 0], 1).unsqueeze(-1)
+			positional_encoding = positional_encoding / self.sampling_frequency
 			context = torch.cat([positional_encoding, time_encoding, condition], dim=-1)
 		else:
 			time_encoding = t.expand(z.shape[0], 1)
@@ -92,7 +94,7 @@ class CNF(torch.nn.Module):
 		self.n1 = MovingBatchNorm1d(input_dim)
 		self.n2 = MovingBatchNorm1d(input_dim)
 
-	def forward(self, z, condition, delta_logpz=None, integration_times=None, reverse=False):
+	def forward(self, z, condition, delta_logpz=None, integration_times=None, reverse=False, sampling_frequency=1):
 		if delta_logpz is None:
 			delta_logpz = torch.zeros(z.shape[0], z.shape[1], 1).to(z) if self.marginal else torch.zeros(z.shape[0], 1).to(z)
 		if integration_times is None:
@@ -100,10 +102,12 @@ class CNF(torch.nn.Module):
 		if reverse:
 			integration_times = torch.flip(integration_times, [0])
 
-		condition = self.condition_norm(condition) #no norm? lets let the encoder handle this if needed
-
-		if not self.marginal: # if not marginal produce noise for hutchinson estimation
+		if self.marginal:
+			self.time_derivative.sampling_frequency = sampling_frequency
+		else:
 			self.time_derivative._rademacher_noise(z)
+
+		condition = self.condition_norm(condition)
 		
 		z, delta_logpz = self.n1(z, delta_logpz, reverse) if not reverse else self.n2(z, delta_logpz, reverse)
 		state = odeint_adjoint(self.time_derivative, (z, delta_logpz, condition), integration_times, method='dopri5', atol=1e-5, rtol=1e-5)

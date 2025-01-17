@@ -13,24 +13,26 @@ from model.TrajFlow import TrajFlow, CausalEnocder, Flow
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 eth = EthUcy(train_batch_size=128, test_batch_size=1, history=8, futures=12, smin=0.3, smax=1.7)
-observation_site = eth.univ_observation_site
+observation_site = eth.zara1_observation_site
 
 traj_flow_j = TrajFlow(
     seq_len=12, input_dim=2, feature_dim=4, 
     embedding_dim=128, hidden_dim=512, 
-    causal_encoder=CausalEnocder.CDE,
-    flow=Flow.CNF,
-    marginal=False).to(device)
-traj_flow_j.load_state_dict(torch.load('ethucy_joint.pt'))
+    causal_encoder=CausalEnocder.GRU,
+    flow=Flow.DNF,
+    marginal=False,
+    norm_rotation=True).to(device)
+traj_flow_j.load_state_dict(torch.load('trajflow_joint.pt'))
 traj_flow_j.eval()
 
 traj_flow_m = TrajFlow(
     seq_len=12, input_dim=2, feature_dim=4,
     embedding_dim=128, hidden_dim=512,
-    causal_encoder=CausalEnocder.CDE,
-    flow=Flow.CNF,
-    marginal=True).to(device)
-traj_flow_m.load_state_dict(torch.load('ethucy_marginal.pt'))
+    causal_encoder=CausalEnocder.GRU,
+    flow=Flow.DNF,
+    marginal=True,
+    norm_rotation=True).to(device)
+traj_flow_m.load_state_dict(torch.load('trajflow_marginal.pt'))
 traj_flow_m.eval()
 
 data = list(observation_site.test_loader)
@@ -42,8 +44,8 @@ target = target.to(device)
 observed_traj = input[0].cpu().numpy()
 observed_traj = np.stack([observed_traj[:, 0], -observed_traj[:, 1]], axis=-1)
 
-unobserved_traj = target[0].cpu().numpy()
-unobserved_traj = np.stack([unobserved_traj[:, 0], -unobserved_traj[:, 1]], axis=-1)
+#unobserved_traj = target[0].cpu().numpy()
+#unobserved_traj = np.stack([unobserved_traj[:, 0], -unobserved_traj[:, 1]], axis=-1)
 
 z_t0, samples, delta_logpz = traj_flow_j.sample(input, feature, 12, 20)
 logpz_t0, logpz_t1 = traj_flow_j.log_prob(z_t0, delta_logpz)
@@ -58,12 +60,13 @@ color_map = plt.cm.viridis
 fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
 axes[0].axis('off')
-axes[0].plot(observed_traj[:, 0], observed_traj[:, 1], color='black', linewidth=linewidth, label='Observed Trajectory')
+axes[0].plot(observed_traj[:, 0], observed_traj[:, 1], color='#EE7733', linewidth=linewidth, label='Observed Trajectory')
 
 last_observed_point = observed_traj[-1]
-x_center, y_center = last_observed_point[0], last_observed_point[1]
-x_range = 0.3
-y_range = 0.3
+x_center = last_observed_point[0]
+y_center = last_observed_point[1]
+x_range = 8
+y_range = 8
 axes[0].set_xlim(x_center - x_range, x_center + x_range)
 axes[0].set_ylim(y_center - y_range, y_center + y_range)
 
@@ -77,18 +80,19 @@ for i in np.argsort(likelihoods):
     axes[0].plot(sampled_traj[:, 0], sampled_traj[:, 1], color=color, linewidth=linewidth)
 
 axes[1].axis('off')
-axes[1].plot(observed_traj[:, 0], observed_traj[:, 1], color='black', linewidth=linewidth, label='Observed Trajectory')
+axes[1].plot(observed_traj[:, 0], observed_traj[:, 1], color='#EE7733', linewidth=linewidth, label='Observed Trajectory')
 
 axes[1].set_xlim(x_center - x_range, x_center + x_range)
 axes[1].set_ylim(y_center - y_range, y_center + y_range)
 
 steps = 100
-linspace = torch.linspace(0, 1, steps)
-x, y = torch.meshgrid(linspace, linspace)
+batch_size = 1000
+linspace_x = torch.linspace(x_center - x_range, x_center + x_range, steps)
+linspace_y = torch.linspace(-y_center - y_range, -y_center + y_range, steps)
+x, y = torch.meshgrid(linspace_x, linspace_y)
 grid = torch.stack((x.flatten(), y.flatten()), dim=-1).to(device)
 
 with torch.no_grad():
-    batch_size = 1000
     embedding = traj_flow_m._embedding(input, feature)
     embedding = embedding.repeat(batch_size, 1)
 
@@ -105,16 +109,16 @@ grid = grid.cpu().detach().numpy()
 x = grid[:, 0].reshape(steps, steps)
 y = -grid[:, 1].reshape(steps, steps)
 
-for t in [0, 1, 2, 3, 5, 7, 11]:
+for t in [0, 1, 2, 3, 5, 11]:
     likelihood = pz_t1[:, t].cpu().numpy().reshape(steps, steps)
     likelihood = likelihood / np.max(likelihood)
-    likelihood = np.where(likelihood < 0.25, np.nan, likelihood)
-    axes[1].pcolormesh(x, y, likelihood, shading='auto', cmap=color_map, alpha=0.5, vmin=0, vmax=1)
+    likelihood = np.where(likelihood < 0.35, np.nan, likelihood)
+    axes[1].pcolormesh(x, y, likelihood, shading='auto', cmap=color_map)
 
 axes[0].text(0.5, -0.1, 'a) Joint distribution', ha='center', va='top', transform=axes[0].transAxes, fontsize=18)
 axes[1].text(0.5, -0.1, 'b) Marginal distribution', ha='center', va='top', transform=axes[1].transAxes, fontsize=18)
 
-handles = [plt.Line2D([0], [0], color='black', lw=4, label='Observed Trajectory')]
+handles = [plt.Line2D([0], [0], color='#E69F00', lw=4, label='Observed Trajectory')]
 fig.legend(handles=handles, prop={'size': 12})
 
 norm = mcolors.Normalize(vmin=0, vmax=1)

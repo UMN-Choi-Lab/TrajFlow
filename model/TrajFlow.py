@@ -121,7 +121,7 @@ class TrajFlow(nn.Module):
 		embedding = self.causal_encoder(t, x)
 		return embedding
 
-	def forward(self, x, y, feat):
+	def forward(self, x, y, feat, sampling_frequency=1):
 		if self.norm_rotation:
 			# TODO: I think we need to roate the features as well if we are going to use them (except for time)
 			x, y, angle = self._normalize_rotation(x, y)
@@ -135,12 +135,12 @@ class TrajFlow(nn.Module):
 		y = y if self.marginal else y.view(batch, seq_len * input_dim)
 		
 		embedding = self._embedding(x, feat)
-		z, delta_logpz = self.flow(y, embedding)
+		z, delta_logpz = self.flow(y, embedding, sampling_frequency=sampling_frequency)
 		
 		z = z if self.marginal else z.view(batch, seq_len, input_dim)
 		return z, delta_logpz
 	
-	def sample(self, x, feat, futures, num_samples=1):
+	def sample(self, x, feat, futures, num_samples=1, sampling_frequency=1):
 		if self.norm_rotation:
 			x, angle = self._normalize_rotation(x)
 			feat = self._rotate_features(feat, angle)
@@ -152,7 +152,7 @@ class TrajFlow(nn.Module):
 		y = torch.stack([base_dist.sample().to(x.device) for _ in range(num_samples)])
 		embedding = self._embedding(x, feat)
 		embedding = embedding.expand(y.shape[0], embedding.shape[1])
-		z, delta_logpz = self.flow(y, embedding, reverse=True)
+		z, delta_logpz = self.flow(y, embedding, reverse=True, sampling_frequency=sampling_frequency)
 
 		if not self.marginal:
 			output_shape = (x.size(0), num_samples, self.seq_len, 2)

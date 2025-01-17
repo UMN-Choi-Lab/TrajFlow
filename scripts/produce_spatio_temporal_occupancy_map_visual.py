@@ -2,7 +2,6 @@ import os
 import sys
 import torch
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from datasets.EthUcy import EthUcy
@@ -40,13 +39,17 @@ y_center = 0
 for i in range(num_trajectories):
     observed_traj = input[i].cpu().numpy()
     observed_traj = np.stack([observed_traj[:, 0], -observed_traj[:, 1]], axis=-1)
+    unobserved_traj = target[i].cpu().numpy()
+    unobserved_traj = np.stack([unobserved_traj[:, 0], -unobserved_traj[:, 1]], axis=-1)
     x_center = observed_traj[-1, 0]
     y_center = -observed_traj[-1, 1]
-    plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='black', linewidth=5, label='Observed Trajectory')
+    plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='#E69F00', linewidth=5, label='Observed Trajectory')
+    plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='#CC79A7', linewidth=5, label='Unobserved Trajectory')
+    #plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='black', linewidth=5, label='Observed Trajectory')
 
-steps = 1000
-batch_size = 10000
-grid_range = 7
+steps = 100#1000
+batch_size = 1000
+grid_range = 5
 linspace_x = torch.linspace(x_center - grid_range, x_center + grid_range, steps)
 linspace_y = torch.linspace(y_center - grid_range, y_center + grid_range, steps)
 x, y = torch.meshgrid(linspace_x, linspace_y)
@@ -65,9 +68,13 @@ for i in range(num_trajectories):
         embedding = embedding.repeat(batch_size, 1)
 
         pz_t1 = []
+        pool = 0
         for grid_batch in grid.split(batch_size, dim=0):
-            grid_batch = grid_batch.unsqueeze(1).expand(-1, 12, -1)
-            z_t0, delta_logpz = traj_flow.flow(grid_batch, embedding)
+            pool += 1
+            print(pool)
+            #grid_batch = grid_batch.unsqueeze(1).expand(-1, 12, -1)
+            grid_batch = grid_batch.unsqueeze(1).expand(-1, 120, -1)
+            z_t0, delta_logpz = traj_flow.flow(grid_batch, embedding, sampling_frequency=10)
             logpz_t0, logpz_t1 = traj_flow.log_prob(z_t0, delta_logpz)
             pz_t1.append(logpz_t1.exp())
         
@@ -81,12 +88,12 @@ grid_numpy = grid.cpu().detach().numpy()
 xx = grid_numpy[:, 0].reshape(steps, steps)
 yy = -grid_numpy[:, 1].reshape(steps, steps)
 likelihood = t.cpu().numpy().reshape(steps, steps)
-likelihood = np.where(likelihood < 0.0035, np.nan, likelihood)
+#likelihood = np.where(likelihood < 0.01, np.nan, likelihood)
 heat_map = plt.pcolormesh(xx, yy, likelihood, shading='auto', cmap=plt.cm.viridis)
 
-cbar = plt.colorbar(heat_map, label='Likelihood', pad=0.2, aspect=20)
+cbar = plt.colorbar(heat_map, label='Likelihood', pad=0.05, aspect=20)
 cbar.ax.set_ylabel('Likelihood', rotation=270, labelpad=15)
-plt.legend(loc='upper left', bbox_to_anchor=(1.1, 1.1), borderaxespad=0)
+plt.legend(loc='upper left', bbox_to_anchor=(0.92, 1.1), borderaxespad=0)
 
 plt.savefig('occupancy_map.png', dpi=300, bbox_inches='tight')
 plt.show()

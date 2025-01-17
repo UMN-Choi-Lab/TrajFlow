@@ -14,7 +14,7 @@ from visualize_temp import visualize_temp
 should_train = True
 should_serialize = True
 should_evaluate = True
-should_visualize = True
+should_visualize = False
 simple_visualization = False
 verbose = False
 marginal = True
@@ -22,9 +22,9 @@ marginal = True
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
-		'encoder': 'GRU',
-		'flow': 'DNF',
-		'dataset': 'EthUcy',
+		'encoder': 'CDE',
+		'flow': 'CNF',
+		'dataset': 'InD',
 		'observation_site': 'zara2',
 		'masked_data_ratio': 0
 	})
