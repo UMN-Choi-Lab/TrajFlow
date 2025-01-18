@@ -39,12 +39,14 @@ y_center = 0
 for i in range(num_trajectories):
     observed_traj = input[i].cpu().numpy()
     observed_traj = np.stack([observed_traj[:, 0], -observed_traj[:, 1]], axis=-1)
-    unobserved_traj = target[i].cpu().numpy()
-    unobserved_traj = np.stack([unobserved_traj[:, 0], -unobserved_traj[:, 1]], axis=-1)
+    #unobserved_traj = target[i].cpu().numpy()
+    #unobserved_traj = np.stack([unobserved_traj[:, 0], -unobserved_traj[:, 1]], axis=-1)
     x_center = observed_traj[-1, 0]
     y_center = -observed_traj[-1, 1]
-    plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='#E69F00', linewidth=5, label='Observed Trajectory')
-    plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='#CC79A7', linewidth=5, label='Unobserved Trajectory')
+    plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='#5DA5DA', linewidth=5, label='Observed Trajectory')
+    #plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='#E69F00', linewidth=5, label='Unobserved Trajectory')
+    #plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='#E69F00', linewidth=5, label='Observed Trajectory')
+    #plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='#CC79A7', linewidth=5, label='Unobserved Trajectory')
     #plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='black', linewidth=5, label='Observed Trajectory')
 
 steps = 100#1000

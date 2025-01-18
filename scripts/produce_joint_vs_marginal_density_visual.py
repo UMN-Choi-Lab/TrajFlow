@@ -60,7 +60,7 @@ color_map = plt.cm.viridis
 fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
 axes[0].axis('off')
-axes[0].plot(observed_traj[:, 0], observed_traj[:, 1], color='#EE7733', linewidth=linewidth, label='Observed Trajectory')
+axes[0].plot(observed_traj[:, 0], observed_traj[:, 1], color='#5DA5DA', linewidth=linewidth, label='Observed Trajectory')
 
 last_observed_point = observed_traj[-1]
 x_center = last_observed_point[0]
@@ -80,7 +80,7 @@ for i in np.argsort(likelihoods):
     axes[0].plot(sampled_traj[:, 0], sampled_traj[:, 1], color=color, linewidth=linewidth)
 
 axes[1].axis('off')
-axes[1].plot(observed_traj[:, 0], observed_traj[:, 1], color='#EE7733', linewidth=linewidth, label='Observed Trajectory')
+axes[1].plot(observed_traj[:, 0], observed_traj[:, 1], color='#5DA5DA', linewidth=linewidth, label='Observed Trajectory')
 
 axes[1].set_xlim(x_center - x_range, x_center + x_range)
 axes[1].set_ylim(y_center - y_range, y_center + y_range)
@@ -118,7 +118,7 @@ for t in [0, 1, 2, 3, 5, 11]:
 axes[0].text(0.5, -0.1, 'a) Joint distribution', ha='center', va='top', transform=axes[0].transAxes, fontsize=18)
 axes[1].text(0.5, -0.1, 'b) Marginal distribution', ha='center', va='top', transform=axes[1].transAxes, fontsize=18)
 
-handles = [plt.Line2D([0], [0], color='#E69F00', lw=4, label='Observed Trajectory')]
+handles = [plt.Line2D([0], [0], color='#5DA5DA', lw=4, label='Observed Trajectory')]
 fig.legend(handles=handles, prop={'size': 12})
 
 norm = mcolors.Normalize(vmin=0, vmax=1)
