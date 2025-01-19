@@ -11,10 +11,10 @@ from evaluate import evaluate
 from visualize import visualize
 from visualize_temp import visualize_temp
 
-should_train = True
+should_train = False
 should_serialize = True
-should_evaluate = True
-should_visualize = False
+should_evaluate = False
+should_visualize = True
 simple_visualization = False
 verbose = False
 marginal = True
@@ -137,7 +137,8 @@ with wandb.init() as run:
 			
 	if should_serialize:
 		suffix = 'marginal' if marginal else 'joint'
-		model_name = f'trajflow_{suffix}.pt'
+		#model_name = f'trajflow_{suffix}.pt'
+		model_name = f'trajflow_{suffix}_ind.pt'
 		if should_train:
 			torch.save(traj_flow.state_dict(), model_name)
 		traj_flow.load_state_dict(torch.load(model_name))
@@ -158,21 +159,21 @@ with wandb.init() as run:
 		wandb.log({'rmse': rmse, 'crps': crps, 'min ade': min_ade, 'min fde': min_fde, 'nll': nll})
 
 	if should_visualize:
-		# visualize(
-		# 	observation_site=observation_site,
-		# 	model=traj_flow,
-		#  	num_samples=10,
-		#  	steps=1000,
-		#  	prob_threshold=0.001,
-		#  	output_dir='visualization',
-		#  	simple=simple_visualization,
-		#  	device=device)
-		visualize_temp(
-			data_loader=observation_site.test_loader,
+		visualize(
+			observation_site=observation_site,
 			model=traj_flow,
-			num_samples=20,
-			steps=1000,
-			prob_threshold=0.001,
-			output_dir='visualization_temp',
-			simple=simple_visualization,
-			device=device)
+		 	num_samples=1,#10,
+		 	steps=1000,
+		 	prob_threshold=0.001,
+		 	output_dir='visualization',
+		 	simple=simple_visualization,
+		 	device=device)
+		# visualize_temp(
+		# 	data_loader=observation_site.test_loader,
+		# 	model=traj_flow,
+		# 	num_samples=20,
+		# 	steps=1000,
+		# 	prob_threshold=0.001,
+		# 	output_dir='visualization_temp',
+		# 	simple=simple_visualization,
+		# 	device=device)

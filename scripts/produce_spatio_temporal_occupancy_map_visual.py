@@ -30,7 +30,7 @@ input = input.to(device)
 feature = feature.to(device)
 target = target.to(device)
 
-plt.figure(figsize=(10, 8))
+plt.figure(figsize=(10, 5))
 plt.axis('off')
 
 x_center = 0
@@ -49,11 +49,12 @@ for i in range(num_trajectories):
     #plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='#CC79A7', linewidth=5, label='Unobserved Trajectory')
     #plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='black', linewidth=5, label='Observed Trajectory')
 
-steps = 100#1000
+steps = 1000
 batch_size = 1000
-grid_range = 5
-linspace_x = torch.linspace(x_center - grid_range, x_center + grid_range, steps)
-linspace_y = torch.linspace(y_center - grid_range, y_center + grid_range, steps)
+x_range = 5
+y_range = 2.5
+linspace_x = torch.linspace(x_center - x_range, x_center + x_range, steps)
+linspace_y = torch.linspace(y_center - y_range, y_center + y_range, steps)
 x, y = torch.meshgrid(linspace_x, linspace_y)
 grid = torch.stack((x.flatten(), y.flatten()), dim=-1).to(device)
 
@@ -69,11 +70,11 @@ for i in range(num_trajectories):
         embedding = traj_flow._embedding(x, feat)
         embedding = embedding.repeat(batch_size, 1)
 
+        j = 0
         pz_t1 = []
-        pool = 0
         for grid_batch in grid.split(batch_size, dim=0):
-            pool += 1
-            print(pool)
+            j += 1
+            print(j)
             #grid_batch = grid_batch.unsqueeze(1).expand(-1, 12, -1)
             grid_batch = grid_batch.unsqueeze(1).expand(-1, 120, -1)
             z_t0, delta_logpz = traj_flow.flow(grid_batch, embedding, sampling_frequency=10)
@@ -94,8 +95,9 @@ likelihood = t.cpu().numpy().reshape(steps, steps)
 heat_map = plt.pcolormesh(xx, yy, likelihood, shading='auto', cmap=plt.cm.viridis)
 
 cbar = plt.colorbar(heat_map, label='Likelihood', pad=0.05, aspect=20)
-cbar.ax.set_ylabel('Likelihood', rotation=270, labelpad=15)
-plt.legend(loc='upper left', bbox_to_anchor=(0.92, 1.1), borderaxespad=0)
+cbar.ax.set_ylabel('Likelihood', rotation=90, fontsize=13)
+plt.legend(loc='upper left', bbox_to_anchor=(0.9, 1.1), borderaxespad=0)
 
-plt.savefig('occupancy_map.png', dpi=300, bbox_inches='tight')
+#plt.savefig('occupancy_map.pdf', format='pdf', dpi=300, bbox_inches='tight')
+plt.savefig('occupancy_map4.png', dpi=300, bbox_inches='tight')
 plt.show()

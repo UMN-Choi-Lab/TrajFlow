@@ -29,8 +29,8 @@ def plot_traj(ax, background, min_x, max_x, min_y, max_y, input, sample, zoom_fa
     ax.set_aspect('equal')
 
     ax.imshow(background, extent=[min_x, max_x, min_y, max_y], aspect='equal')
-    ax.plot(observed_traj[:, 0], observed_traj[:, 1], color='red', linewidth=1.5, label='Observed Trajectory')
-    ax.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='lightcoral', linewidth=1.5, label='Unobserved Trajectory')
+    ax.plot(observed_traj[:, 0], observed_traj[:, 1], color='#5DA5DA', linewidth=1.5, label='Observed Trajectory')
+    ax.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='#E69F00', linewidth=1.5, label='Unobserved Trajectory')
 
 def create_combined_plot(background, min_x, max_x, min_y, max_y, input, samples, top_k_sample):
     fig = plt.figure(figsize=(12, 5))
@@ -39,15 +39,15 @@ def create_combined_plot(background, min_x, max_x, min_y, max_y, input, samples,
 
     ax1 = plt.subplot(1, 2, 1)
     plot_traj(ax1, background, min_x, max_x, min_y, max_y, input, samples, zoom_factor)
-    ax1.text(0.5, -0.1, 'a) Naive Sampling', ha='center', va='top', transform=ax1.transAxes, fontsize=18)
+    ax1.text(0.5, -0.1, 'a) Naive Sampling', ha='center', va='top', transform=ax1.transAxes, fontsize=20)
 
     ax2 = plt.subplot(1, 2, 2)
     plot_traj(ax2, background, min_x, max_x, min_y, max_y, input, top_k_sample, zoom_factor)
-    ax2.text(0.5, -0.1, 'b) Top-K Sampling', ha='center', va='top', transform=ax2.transAxes, fontsize=18)
+    ax2.text(0.5, -0.1, 'b) Top-K Sampling', ha='center', va='top', transform=ax2.transAxes, fontsize=20)
 
     handles = [
-        plt.Line2D([0], [0], color='red', lw=4, label='Observed Trajectory'),
-        plt.Line2D([0], [0], color='lightcoral', lw=4, label='Estimated Trajectory')
+        plt.Line2D([0], [0], color='#5DA5DA', lw=5, label='Observed Trajectory'),
+        plt.Line2D([0], [0], color='#E69F00', lw=5, label='Estimated Trajectory')
     ]
     fig.legend(handles=handles, loc='upper center', bbox_to_anchor=(0.78, 1.0), prop={'size': 12})
 
@@ -72,9 +72,10 @@ traj_flow = TrajFlow(
     hidden_dim=512,
     causal_encoder=CausalEnocder.CDE,
     flow=Flow.CNF,
-    marginal=True).to(device)
+    marginal=True,
+    norm_rotation=False).to(device)
 
-traj_flow.load_state_dict(torch.load('v_joint.pt'))
+traj_flow.load_state_dict(torch.load('trajflow_marginal_ind.pt'))
 
 background = plt.imread('data/paper_background.png')
 fudge_factor = 11.5
@@ -89,7 +90,7 @@ input, feature, target = data[0]
 input = input.to(device)
 feature = feature.to(device)
 
-z_t0, samples, delta_logpz = traj_flow.sample(input, feature, 100, 20)
+z_t0, samples, delta_logpz = traj_flow.sample(input, feature, 100, 200)
 logpz_t0, logpz_t1 = traj_flow.log_prob(z_t0, delta_logpz)
 
 max_indices = torch.argmax(logpz_t1, dim=0)

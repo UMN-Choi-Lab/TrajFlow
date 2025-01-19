@@ -85,8 +85,8 @@ axes[1].plot(observed_traj[:, 0], observed_traj[:, 1], color='#5DA5DA', linewidt
 axes[1].set_xlim(x_center - x_range, x_center + x_range)
 axes[1].set_ylim(y_center - y_range, y_center + y_range)
 
-steps = 100
-batch_size = 1000
+steps = 1000
+batch_size = 5000
 linspace_x = torch.linspace(x_center - x_range, x_center + x_range, steps)
 linspace_y = torch.linspace(-y_center - y_range, -y_center + y_range, steps)
 x, y = torch.meshgrid(linspace_x, linspace_y)
@@ -96,8 +96,11 @@ with torch.no_grad():
     embedding = traj_flow_m._embedding(input, feature)
     embedding = embedding.repeat(batch_size, 1)
 
+    j = 0
     pz_t1 = []
     for grid_batch in grid.split(batch_size, dim=0):
+        j += 1
+        print(j)
         grid_batch = grid_batch.unsqueeze(1).expand(-1, 12, -1)
         z_t0, delta_logpz = traj_flow_m.flow(grid_batch, embedding)
         logpz_t0, logpz_t1 = traj_flow_m.log_prob(z_t0, delta_logpz)
@@ -115,10 +118,10 @@ for t in [0, 1, 2, 3, 5, 11]:
     likelihood = np.where(likelihood < 0.35, np.nan, likelihood)
     axes[1].pcolormesh(x, y, likelihood, shading='auto', cmap=color_map)
 
-axes[0].text(0.5, -0.1, 'a) Joint distribution', ha='center', va='top', transform=axes[0].transAxes, fontsize=18)
-axes[1].text(0.5, -0.1, 'b) Marginal distribution', ha='center', va='top', transform=axes[1].transAxes, fontsize=18)
+axes[0].text(0.5, 0, 'a) Joint distribution', ha='center', va='top', transform=axes[0].transAxes, fontsize=20)
+axes[1].text(0.5, 0, 'b) Marginal distribution', ha='center', va='top', transform=axes[1].transAxes, fontsize=20)
 
-handles = [plt.Line2D([0], [0], color='#5DA5DA', lw=4, label='Observed Trajectory')]
+handles = [plt.Line2D([0], [0], color='#5DA5DA', lw=5, label='Observed Trajectory')]
 fig.legend(handles=handles, prop={'size': 12})
 
 norm = mcolors.Normalize(vmin=0, vmax=1)
@@ -128,5 +131,7 @@ cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
 cbar = fig.colorbar(dummy_mappable, cax=cbar_ax, orientation='vertical', fraction=0.02, pad=0.04)
 cbar.set_label('Likelihood', fontsize=14)
 
-plt.savefig('forecasts.pdf', format='pdf')
+#plt.savefig('forecasts.pdf', format='pdf', dpi=100)
+#plt.savefig('forecasts.svg', format='svg')
+plt.savefig('forecasts2.png', dpi=300, bbox_inches='tight')
 plt.show()
