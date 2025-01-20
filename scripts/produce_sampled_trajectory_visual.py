@@ -29,8 +29,8 @@ def plot_traj(ax, background, min_x, max_x, min_y, max_y, input, sample, zoom_fa
     ax.set_aspect('equal')
 
     ax.imshow(background, extent=[min_x, max_x, min_y, max_y], aspect='equal')
-    ax.plot(observed_traj[:, 0], observed_traj[:, 1], color='#5DA5DA', linewidth=1.5, label='Observed Trajectory')
-    ax.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='#E69F00', linewidth=1.5, label='Unobserved Trajectory')
+    ax.plot(observed_traj[:, 0], observed_traj[:, 1], color='#5DA5DA', linewidth=2.5, label='Observed Trajectory')
+    ax.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='#E69F00', linewidth=2.5, label='Unobserved Trajectory')
 
 def create_combined_plot(background, min_x, max_x, min_y, max_y, input, samples, top_k_sample):
     fig = plt.figure(figsize=(12, 5))

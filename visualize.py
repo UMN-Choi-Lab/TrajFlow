@@ -22,7 +22,7 @@ def makedir(directory):
 
 def compute_pzt1(model, input, features, grid):
     with torch.no_grad():
-        batch_size = 10
+        batch_size = 500
 
         embedding = model._embedding(input, features)
         embedding = embedding.repeat(batch_size, 1)
@@ -84,20 +84,20 @@ def generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
 
     color_map = plt.cm.viridis
     color_map.set_bad(color='none')
-    heat_map = plt.pcolormesh(x, y, likelihood, shading='auto', cmap=color_map, alpha=0.5, vmin=0, vmax=1)
+    heat_map = plt.pcolormesh(x, y, likelihood, shading='auto', cmap=color_map, vmin=0, vmax=1)
 
     if not simple:
         plt.colorbar(heat_map, label='Likelihood')
     
     if simple:
-        plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='red', linewidth=1)
+        plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='#5DA5DA', linewidth=1.5)
     else:
-        plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='red', linewidth=1, label='Observed Trajectory')
+        plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='#5DA5DA', linewidth=1.5, label='Observed Trajectory')
     
     if simple:
-        plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='lightcoral', linewidth=1)
+        plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='#E69F00', linewidth=1.5)
     else:
-        plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='lightcoral', linewidth=1, label='Unobserved Trajectory')
+        plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='#E69F00', linewidth=1.5, label='Unobserved Trajectory')
     
     if not simple:
         plt.title(f'Density Heatmap Time: {t}')
@@ -105,7 +105,7 @@ def generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
         plt.ylabel('Y')
         plt.legend()
 
-    plt.savefig(frame)
+    plt.savefig(frame, dpi=300, bbox_inches='tight')
     plt.close()
 
 def visualize(observation_site, model, num_samples, steps, prob_threshold, output_dir, simple, device):

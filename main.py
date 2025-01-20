@@ -15,7 +15,7 @@ should_train = False
 should_serialize = True
 should_evaluate = False
 should_visualize = True
-simple_visualization = False
+simple_visualization = True
 verbose = False
 marginal = True
 
@@ -162,7 +162,7 @@ with wandb.init() as run:
 		visualize(
 			observation_site=observation_site,
 			model=traj_flow,
-		 	num_samples=1,#10,
+		 	num_samples=30,
 		 	steps=1000,
 		 	prob_threshold=0.001,
 		 	output_dir='visualization',
