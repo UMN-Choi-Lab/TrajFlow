@@ -17,12 +17,12 @@ def plot_observed_and_unobserved_trajectory(background, min_x, max_x, min_y, max
     plt.xlim(min_x, max_x)
     plt.ylim(min_y, max_y)
     plt.imshow(background, extent=[min_x, max_x, min_y, max_y], aspect='equal')
-    plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='red', linewidth=5, label='Observed Trajectory')
-    plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='lightcoral', linewidth=5, label='Unobserved Trajectory')
+    plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='#5DA5DA', linewidth=6, label='Observed Trajectory')
+    plt.plot(unobserved_traj[:, 0], unobserved_traj[:, 1], color='#E69F00', linewidth=6, label='Unobserved Trajectory')
     file_name = 'ou_visual.png'
     if os.path.exists(file_name):
         os.remove(file_name)
-    plt.savefig(file_name, bbox_inches='tight')
+    plt.savefig(file_name, dpi=300, bbox_inches='tight')
     crop_image('ou_visual.png', crop_box, 'ou_visual.png')  
     plt.show()
 
@@ -32,11 +32,11 @@ def plot_observed_trajectory(background, min_x, max_x, min_y, max_y, observed_tr
     plt.xlim(min_x, max_x)
     plt.ylim(min_y, max_y)
     plt.imshow(background, extent=[min_x, max_x, min_y, max_y], aspect='equal')
-    plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='red', linewidth=1, label='Observed Trajectory')
+    plt.plot(observed_traj[:, 0], observed_traj[:, 1], color='#5DA5DA', linewidth=6, label='Observed Trajectory')
     file_name = 'o_visual.png'
     if os.path.exists(file_name):
         os.remove(file_name)
-    plt.savefig(file_name, bbox_inches='tight')
+    plt.savefig(file_name, dpi=300, bbox_inches='tight')
     crop_image('o_visual.png', crop_box, 'o_visual.png')  
     plt.show()
 
@@ -64,6 +64,7 @@ observed_traj = np.stack([observed_traj[:, 0], -observed_traj[:, 1]], axis=-1)
 unobserved_traj = ind.observation_site1.denormalize(target[0].numpy())
 unobserved_traj = np.stack([unobserved_traj[:, 0], -unobserved_traj[:, 1]], axis=-1)
 
-crop_box = (125, 0, 625, 475)
+#crop_box = (125, 0, 625, 475)
+crop_box = (375, 0, 1875, 1425)
 plot_observed_and_unobserved_trajectory(background, min_x, max_x, min_y, max_y, observed_traj, unobserved_traj, crop_box)
-#plot_observed_trajectory(background, min_x, max_x, min_y, max_y, observed_traj, crop_box)
+plot_observed_trajectory(background, min_x, max_x, min_y, max_y, observed_traj, crop_box)

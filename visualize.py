@@ -60,10 +60,10 @@ def generate_video(background_image, grid, pz_t1, prob_threshold,
         generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
                         min_x, max_x, min_y, max_y, t, frames_dir, simple)
 
-    frame_source = os.path.join(f'{frames_dir}', 'frame_%03d.png')
-    video_destination = os.path.join(output_dir, f'video{i}.mp4')
-    command = ['ffmpeg', '-r', '10', '-i', frame_source, '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', video_destination]
-    subprocess.run(command, check=True)
+    #frame_source = os.path.join(f'{frames_dir}', 'frame_%03d.png')
+    #video_destination = os.path.join(output_dir, f'video{i}.mp4')
+    #command = ['ffmpeg', '-r', '10', '-i', frame_source, '-vcodec', 'libx264', '-pix_fmt', 'yuv420p', video_destination]
+    #subprocess.run(command, check=True)
 
     
 def generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
@@ -105,7 +105,7 @@ def generate_frame(background, x, y, likelihood, observed_traj, unobserved_traj,
         plt.ylabel('Y')
         plt.legend()
 
-    plt.savefig(frame, dpi=300, bbox_inches='tight')
+    plt.savefig(frame, dpi=100, bbox_inches='tight')
     plt.close()
 
 def visualize(observation_site, model, num_samples, steps, prob_threshold, output_dir, simple, device):

@@ -19,15 +19,16 @@ X, Y = np.meshgrid(x, y)
 mu = np.array([0, 0])
 sigma = np.array([[1, 0], [0, 1]])
 Z = gaussian(X, Y, mu, sigma)
+Z_masked = np.ma.masked_where(Z < 0.075, Z)
 
 
 plt.figure(figsize=(8, 6))
-plt.imshow(Z, extent=(MIN, MAX, MIN, MAX), origin='lower', cmap='viridis', interpolation='bilinear')
+plt.imshow(Z_masked, extent=(MIN, MAX, MIN, MAX), origin='lower', cmap='viridis', interpolation='bilinear')
 plt.axis('off')
 
 file_name = 'gaussian_visual.png'
 if os.path.exists(file_name):
         os.remove(file_name)
-plt.savefig(file_name, bbox_inches='tight')
+plt.savefig(file_name, dpi=300, bbox_inches='tight', transparent=True)
 
 plt.show()
