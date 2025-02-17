@@ -15,7 +15,7 @@ should_train = False
 should_serialize = True
 should_evaluate = False
 should_visualize = True
-simple_visualization = True
+simple_visualization = False
 verbose = False
 marginal = True
 

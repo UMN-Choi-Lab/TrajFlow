@@ -163,8 +163,8 @@ class InD():
 		return torch.cat([features, t], dim=-1)
 	
 	def _mask(self, data, features):
-		seq_len = 100 # TODO: we have to not hard code 100 everywhere
-		generator = torch.Generator()#.manual_seed(56789)
+		seq_len = 100
+		generator = torch.Generator()
 		for i in range(data.shape[0]):
 			mask = torch.randperm(seq_len, generator=generator)[:int(seq_len * self.missing_rate)].sort().values
 			data[i][mask] = float('nan')
