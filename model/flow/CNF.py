@@ -54,12 +54,8 @@ class ODEFunc(nn.Module):
 		trace_estimate = torch.sum(z_dot_e * e, dim=-1)
 		return trace_estimate
 	
-	def _jacobian_trace_joint(self, z_dot, z): # might need hutchson estimator here for efficency (make it configurable if we use hutchonson?)
+	def _jacobian_trace_joint(self, z_dot, z):
 		return self._hutchinson_estimator(z_dot, z)
-		trace = 0.0
-		for i in range(z_dot.shape[1]):
-			trace += torch.autograd.grad(z_dot[:, i].sum(), z, create_graph=True)[0][:, i]
-		return trace
 
 	def _jacobian_trace_marginal(self, z_dot, z):
 		batch_size, seq_len, dim = z.shape
