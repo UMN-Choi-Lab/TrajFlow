@@ -21,7 +21,7 @@ class ODEFunc(nn.Module):
 			layers.append(ConcatSquashLinear(dim_list[i], dim_list[i + 1], condition_dim + temporal_context_dim))
 		self.layers = nn.ModuleList(layers)
 
-	def _z_dot(self, t, z, condition):		
+	def _z_dot(self, t, z, condition):
 		if self.marginal:
 			condition = condition.unsqueeze(1).expand(-1, z.shape[1], -1)
 			time_encoding = t.expand(z.shape[0], z.shape[1], 1)
