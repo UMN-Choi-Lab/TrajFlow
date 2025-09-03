@@ -5,7 +5,7 @@ from torchdiffeq import odeint_adjoint
 from model.layers.Spline import NaturalCubicSpline
 
 class CDEFunc(nn.Module):
-	def __init__(self, input_dim, embedding_dim, hidden_dim, num_layers=3): # TODO: use num_layers
+	def __init__(self, input_dim, embedding_dim, hidden_dim, num_layers=3):
 		super(CDEFunc, self).__init__()
 		self.input_dim = input_dim
 		self.embedding_dim = embedding_dim

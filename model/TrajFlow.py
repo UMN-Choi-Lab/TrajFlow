@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 from model.encoder.GRU import GRU
-from model.encoder.LSTM import LSTM
-from model.encoder.Transformer import Transformer
 from model.encoder.CDE import CDE
 from model.flow.CNF import CNF
 from model.flow.DNF import DNF
@@ -11,9 +9,7 @@ from enum import Enum
 
 class CausalEnocder(Enum):
 	GRU = 1
-	LSTM = 2
-	TRANSFORMER = 3
-	CDE = 4
+	CDE = 2
 	
 class Flow(Enum):
 	DNF = 1
@@ -22,10 +18,6 @@ class Flow(Enum):
 def construct_causal_enocder(input_dim, embedding_dim, hidden_dim, num_layers, causal_encoder):
 	if causal_encoder == CausalEnocder.GRU:
 		return GRU(input_dim=input_dim, hidden_dim=embedding_dim, num_layers=num_layers)
-	elif causal_encoder == CausalEnocder.LSTM:
-		return LSTM(input_dim=input_dim, hidden_dim=embedding_dim, num_layers=num_layers)
-	elif causal_encoder == CausalEnocder.TRANSFORMER:
-		return Transformer(input_dim=input_dim, hidden_dim=embedding_dim, num_layers=num_layers, num_heads=num_layers)
 	elif causal_encoder == CausalEnocder.CDE:
 		return CDE(input_dim=input_dim, embedding_dim=embedding_dim, hidden_dim=hidden_dim, num_layers=num_layers)
 	else:
