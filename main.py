@@ -13,8 +13,8 @@ from visualize_temp import visualize_temp
 
 should_train = False
 should_serialize = True
-should_evaluate = False
-should_visualize = True
+should_evaluate = True
+should_visualize = False
 simple_visualization = False
 verbose = False
 marginal = True
@@ -22,8 +22,8 @@ marginal = True
 with wandb.init() as run:
 	run.config.setdefaults({
 		'seed': random.randint(0, 2**32 - 1),
-		'encoder': 'CDE',
-		'flow': 'CNF',
+		'encoder': 'GRU',
+		'flow': 'DNF',
 		'dataset': 'InD',
 		'observation_site': 'zara2',
 		'masked_data_ratio': 0
@@ -64,8 +64,8 @@ with wandb.init() as run:
 		seq_len = 12
 		input_dim = 2
 		feature_dim = 4
-		embedding_dim = 128#32
-		hidden_dim = 512#64
+		embedding_dim = 128
+		hidden_dim = 512
 		training_epochs = 150
 		evaulation_samples = 20
 		norm_rotate = True
@@ -136,9 +136,9 @@ with wandb.init() as run:
 		wandb.log({'loss': loss})
 			
 	if should_serialize:
-		suffix = 'marginal' if marginal else 'joint'
-		#model_name = f'trajflow_{suffix}.pt'
-		model_name = f'trajflow_{suffix}_ind.pt'
+		#suffix = 'marginal' if marginal else 'joint'
+		#model_name = f'trajflow_{suffix}_{run.config.dataset}_{run.config.seed}.pt'
+		model_name = 'trajflow_GRU_DNF_marginal_ind.pt'
 		if should_train:
 			torch.save(traj_flow.state_dict(), model_name)
 		traj_flow.load_state_dict(torch.load(model_name))

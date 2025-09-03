@@ -1,4 +1,3 @@
-import math
 import torch
 import torch.nn as nn
 from model.encoder.GRU import GRU
@@ -61,7 +60,6 @@ class TrajFlow(nn.Module):
 		self.causal_encoder = construct_causal_enocder(input_dim + feature_dim, embedding_dim, hidden_dim, 4, causal_encoder)
 		self.flow = construct_flow(flow_input_dim, embedding_dim, hidden_dim, flow, marginal)
 	
-	# TODO: from flomo make sure the names match up
 	def _abs_to_rel(self, y, x_t):
 		y_rel = y - x_t
 		y_rel[:,1:] = (y_rel[:,1:] - y_rel[:,:-1])
@@ -74,13 +72,13 @@ class TrajFlow(nn.Module):
 	def _rotate(self, x, x_t, angles_rad):
 		c, s = torch.cos(angles_rad), torch.sin(angles_rad)
 		c, s = c.unsqueeze(1), s.unsqueeze(1)
-		x_center = x - x_t  # translate
+		x_center = x - x_t
 		x_vals, y_vals = x_center[:, :, 0], x_center[:, :, 1]
-		new_x_vals = c * x_vals + (-1 * s) * y_vals  # _rotate x
-		new_y_vals = s * x_vals + c * y_vals  # _rotate y
+		new_x_vals = c * x_vals + (-1 * s) * y_vals
+		new_y_vals = s * x_vals + c * y_vals
 		x_center[:, :, 0] = new_x_vals
 		x_center[:, :, 1] = new_y_vals
-		return x_center + x_t  # translate back
+		return x_center + x_t
 	
 	def _rotate_features(self, features, angles_rad):
 		c, s = torch.cos(angles_rad), torch.sin(angles_rad)
@@ -100,19 +98,16 @@ class TrajFlow(nn.Module):
 
 	def _normalize_rotation(self, x, y_true=None):
 		x_t = x[:, -1:, :]
-		# compute rotation angle, such that last timestep aligned with (1,0)
 		x_t_rel = x[:, -1] - x[:, -2]
 		rot_angles_rad = -1 * torch.atan2(x_t_rel[:, 1], x_t_rel[:, 0])
 		x = self._rotate(x, x_t, rot_angles_rad)
 
 		if y_true != None:
 			y_true = self._rotate(y_true, x_t, rot_angles_rad)
-			return x, y_true, rot_angles_rad  # inverse
+			return x, y_true, rot_angles_rad
 
-		return x, rot_angles_rad  # forward pass
-	# end TODO
-
-	# TODO: flomo does something with x here need to understand that
+		return x, rot_angles_rad
+	
 	def _embedding(self, x, feat): 
 		_, seq_length, _ = x.shape
 		x = torch.cat([x, feat], dim=-1)
@@ -123,7 +118,6 @@ class TrajFlow(nn.Module):
 
 	def forward(self, x, y, feat, sampling_frequency=1):
 		if self.norm_rotation:
-			# TODO: I think we need to roate the features as well if we are going to use them (except for time)
 			x, y, angle = self._normalize_rotation(x, y)
 			feat = self._rotate_features(feat, angle)
 
