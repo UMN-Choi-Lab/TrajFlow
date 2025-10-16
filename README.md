@@ -1,6 +1,8 @@
 # TrajFlow
 Official repository of the [TrajFlow](https://arxiv.org/abs/2501.14266) paper.
 
+![TrajFlow Inference](assets/inference.gif)
+
 # Installation
 
 The code in this repository was implemented against python 3.9. Use the following commands to install the dependecy packackes.
